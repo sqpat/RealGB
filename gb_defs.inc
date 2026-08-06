@@ -36,11 +36,21 @@ LOAD_NEXT_INSTRUCTION MACRO cycles
     jmp  ax
 ENDM
 
+LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
+    INCREMENT_CYCLES cycles
+    lodsb
+    mov  ah, al
+    mov  word ptr cs:[pointer_to_core_1], ax
+    jmp  dword ptr cs:[pointer_to_core_1]
+ENDM
+
 LOAD_NEXT_INSTRUCTION_NOCYCLES MACRO
     lodsb
     mov  ah, al
     jmp  ax
 ENDM
+
+
 
 
 
