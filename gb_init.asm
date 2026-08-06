@@ -10,8 +10,14 @@ CORE1 SEGMENT
   ASSUME CS:CORE1
 ENDS
 
+CORE2 SEGMENT
+  ASSUME CS:CORE2
+ENDS
+
+
 
 EXTRN CORE1_START
+EXTRN CORE2_START
 
 INIT SEGMENT
   ASSUME CS:INIT
@@ -48,17 +54,15 @@ mov  word ptr ds:[VARIABLE_exit_sp], sp
 ; 1. load rom into EMS page frame
 
 
-; 2. load emulator core segment(s)
-
-; TODO allocate from dos. for now just shove it in segment 0x4000
-
-; 3. jump into core
-
+; 2. initialize emualtor state
 
 mov ax, 08000h
 mov ds, ax   ; emulator lives in 0x8000
 ; todo: set up stack to be in 07000h or some such.
 
+mov  si, 0  ; initial IP
+
+; 3. jump into core
 ;jmp dword ptr cs:[VARIABLE_core_location]
 
 
