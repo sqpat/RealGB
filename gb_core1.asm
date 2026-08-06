@@ -4,6 +4,7 @@ INCLUDE gb_defs.inc
 
 EXTRN CORE2_START
 EXTRN BAD_OPCODE_DETECTED
+EXTRN FF_OPCODE_HANDLER_CORE2
 
 INIT SEGMENT
   ASSUME CS:INIT
@@ -1132,6 +1133,11 @@ LOAD_NEXT_INSTRUCTION 4
 OPCODE_DEFINE 0CBh   ; FIRST BYTE OF TWO BYTE CALL
 
 ; jump into core 2 
+pop  ax
+mov  ax, OFFSET FF_OPCODE_HANDLER_CORE2
+push ax 
+
+
 lodsb
 mov  ah, al
 mov  word ptr cs:[pointer_to_core_2], ax
@@ -1437,7 +1443,7 @@ cmp    cl, al
 LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 0FFh   ; RST 7
-
+retf
 ; todo...  int3? retf?
 
 

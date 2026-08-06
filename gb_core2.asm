@@ -5,6 +5,7 @@ INCLUDE gb_defs.inc
 ; CB prefix instruction handling
 
 EXTRN CORE1_START
+EXTRN FF_OPCODE_HANDLER_CORE1
 
 CORE1 SEGMENT
   ASSUME CS:CORE1
@@ -1343,16 +1344,14 @@ sahf
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
 
 OPCODE_DEFINE 0FFh   ; SET 7, A
+retf
 
 COMMENT @
 lahf
 or    cl, (1 SHL 7)
 sahf
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
-
 @
-
-
 
 
 

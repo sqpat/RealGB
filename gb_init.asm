@@ -24,6 +24,8 @@ ENDS
 
 EXTRN CORE1_START
 EXTRN CORE2_START
+EXTRN pointer_to_core_1
+EXTRN pointer_to_core_2
 
 INIT SEGMENT
   ASSUME CS:INIT
@@ -95,12 +97,29 @@ jc    emulator_shutdown
 done_loading_rom:
 ; 2. initialize emualtor state
 
-; todo: set up stack to be in 07000h or some such.
+mov   ax, cs
+sub   ax, 02000h
+mov   word ptr cs:[VARIABLE_core_location+2], ax
+mov   es, ax
+add   ax, 01000h
+mov   di, OFFSET pointer_to_core_2+2
+stosw
+mov   es, ax
+sub   ax, 01000h
+mov   di, OFFSET pointer_to_core_1+2
+stosw
+
 
 mov  si, 0  ; initial IP
 
 ; 3. jump into core
-;jmp dword ptr cs:[VARIABLE_core_location]
+
+push cs
+mov  ax, OFFSET FF_OPCODE_HANDLER_CORE1
+push ax 
+
+
+jmp dword ptr cs:[VARIABLE_core_location]
 
 
 emulator_shutdown:
@@ -130,10 +149,50 @@ POPA_MACRO
 mov   ax, 04C00h
 int   021h
 
+ALIGN 2
 
 BAD_OPCODE_DETECTED:
 public BAD_OPCODE_DETECTED
 jmp emulator_shutdown
+
+ALIGN 2
+FF_OPCODE_HANDLER_CORE1:
+
+push cs
+mov  ax, OFFSET FF_OPCODE_HANDLER_CORE1
+push ax 
+
+mov    word ptr ds:[di], si  ; store IP
+lea    di, [di - 2] ; push to stack.
+mov    si, 038h
+INCREMENT_CYCLES 4
+lodsb
+mov    ah, al
+mov    word ptr cs:[VARIABLE_core_location], ax
+
+db 02Eh, 0ffh, 02eh
+dw OFFSET VARIABLE_core_location
+;jmp    dword ptr cs:[VARIABLE_core_location]
+
+
+ALIGN 2
+FF_OPCODE_HANDLER_CORE2:
+push cs
+mov  ax, OFFSET FF_OPCODE_HANDLER_CORE1 
+push ax 
+
+lahf
+or    cl, (1 SHL 7)
+sahf
+INCREMENT_CYCLES 2
+lodsb
+mov    ah, al
+mov    word ptr cs:[VARIABLE_core_location], ax
+jmp dword ptr cs:[VARIABLE_core_location]
+
+
+PUBLIC FF_OPCODE_HANDLER_CORE1
+PUBLIC FF_OPCODE_HANDLER_CORE2
 
 
 ;;; VARIABLES
@@ -144,7 +203,8 @@ ALIGN 2
 VARIABLE_exit_sp:
 dw 0
 VARIABLE_core_location:
-dw CORE1_START, SEG CORE1
+dw CORE1_START
+dw SEG CORE1
 VARIABLE_rom_file_handle:
 dw 0
 

@@ -52,6 +52,10 @@ ENDM
 
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
     INCREMENT_CYCLES cycles
+    pop  ax
+    mov  ax, OFFSET FF_OPCODE_HANDLER_CORE1
+    push ax 
+
     lodsb
     mov  ah, al
     mov  word ptr cs:[pointer_to_core_1], ax
@@ -76,8 +80,13 @@ ROL4_MACRO MACRO reg
 ENDIF
 ENDM
 
+SET_N_FLAG_ON MACRO
+   mov ch, 1
+ENDM
 
-
+SET_N_FLAG_OFF MACRO
+   mov ch, 0
+ENDM
 
 
 OPCODE_DEFINE MACRO byte
