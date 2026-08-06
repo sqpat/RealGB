@@ -29,11 +29,20 @@ INCREMENT_CYCLES MACRO cycles
 
 ENDM
 
-LOAD_NEXT_INSTRUCTION MACRO
+LOAD_NEXT_INSTRUCTION MACRO cycles
+    INCREMENT_CYCLES cycles
     lodsb
     mov  ah, al
     jmp  ax
 ENDM
+
+LOAD_NEXT_INSTRUCTION_NOCYCLES MACRO
+    lodsb
+    mov  ah, al
+    jmp  ax
+ENDM
+
+
 
 OPCODE_DEFINE MACRO byte
     ORG ( &byte shl 8) + &byte

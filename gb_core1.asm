@@ -9,7 +9,22 @@ CORE2 SEGMENT
   ASSUME CS:CORE2
 ENDS
 
-
+COMMENT @
+AX  = scratch
+BX  = HL
+CH  = ??
+CL  = A
+BP  = BC
+DX  = DE
+DI  = SP
+DS  = emulated 64k space
+SI  = IP (or pc or whatever)
+SP  = ??
+CS  = emulator core
+ES  = ??
+SS  = garbage area 
+FLAGS emulate flags 
+@
 
 
 SEGMENT CORE1  USE16 PARA PUBLIC 'CODE'
@@ -23,55 +38,214 @@ INCREMENT_CYCLES 1
 CORE1_START:
 public CORE1_START
 
-LOAD_NEXT_INSTRUCTION
+LOAD_NEXT_INSTRUCTION_NOCYCLES
 
 
 OPCODE_DEFINE 001h   ; LD BC, d16
+
+lodsw
+xchg  ax, bp 
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 002h   ; LD (BC), A   
+
+mov   byte ptr ds:[bp], cl
+
+LOAD_NEXT_INSTRUCTION 2
+
+
 OPCODE_DEFINE 003h   ; INC BC
+
+inc  bp
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 004h   ; INC B
+
+xchg ax, bp
+inc  al
+xchg ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 005h   ; DEC B
+
+xchg ax, bp
+dec  al
+xchg ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 006h   ; LD B, d8
+
+xchg ax, bp
+lodsb
+xchg ax, bp
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 007h   ; RLCA
+
+rol cl, 1
+LOAD_NEXT_INSTRUCTION 1
+
 
 OPCODE_DEFINE 008h   ; LD (a16), SP
 
+lodsw
+xchg  ax, di
+mov   word ptr ds:[di], ax
+xchg  ax, di
+LOAD_NEXT_INSTRUCTION 5
+
 OPCODE_DEFINE 009h   ; ADD HL, BC
 
-OPCODE_DEFINE 00Ah   ; ADD HL, BC
+add   bx, bp
+LOAD_NEXT_INSTRUCTION 2
 
-OPCODE_DEFINE 00Bh   ; ADD HL, BC
+OPCODE_DEFINE 00Ah   ; LD A, (BC)
+
+mov   cl, byte ptr ds:[bp]
+LOAD_NEXT_INSTRUCTION 2
+
+
+
+OPCODE_DEFINE 00Bh   ; DEC BC
+
+dec   bp
+LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 00Ch   ; INC C
+
+xchg ax, bp
+inc  ah
+xchg ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 00Dh   ; DEC C
+
+xchg ax, bp
+dec  ah
+xchg ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 00Eh   ; LD C, d8
+
+; a little gross.
+
+xchg ax, bp
+xchg al, ah
+lodsb
+xchg al, ah
+xchg ax, bp
+LOAD_NEXT_INSTRUCTION 2
+
 
 OPCODE_DEFINE 00Fh   ; RRCA
 
+ror  cl, 1
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 010h   ; STOP
+
+; TODO.
+
 OPCODE_DEFINE 011h   ; LD DE, d16
+
+lodsw
+xchg  ax, dx
+LOAD_NEXT_INSTRUCTION 3
+
 OPCODE_DEFINE 012h   ; LD (DE), A
+
+xchg  dx, bx
+mov   byte ptr ds:[bx], cl
+xchg  dx, bx
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 013h   ; INC DE
+
+inc   dx
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 014h   ; INC D
+
+inc   dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 015h   ; DEC D
+
+dec   dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 016h   ; LD D, d8
 
+lodsb
+mov  dl, al
+LOAD_NEXT_INSTRUCTION 2
+
+
 OPCODE_DEFINE 017h   ; RLA
+
+rcl  cl, 1
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 018h   ; JR s8
+
+lodsb
+cbw
+xchg ax, bx
+lea  si, [si + bx]
+xchg ax, bx
+LOAD_NEXT_INSTRUCTION 3
+
 OPCODE_DEFINE 019h   ; ADD HL, DE
+
+add  bx, dx
+LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 01Ah   ; LD A, (DE)
 
+xchg bx, dx
+mov  cl, byte ptr ds:[bx]
+xchg bx, dx
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 01Bh   ; DEC DE
 
+dec  dx
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 01Ch   ; INC E
+
+inc  dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 01Dh   ; DEC E
+
+dec  dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 01Eh   ; LD E, d8
+
+lodsb
+mov   dh, al
+LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 01Fh   ; RRA
 
+rcr  cl, 1
+LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 020h   ; JR NZ, s8
+
+lodsb
+jz   jr_zero_flag_on
+
+LOAD_NEXT_INSTRUCTION 2
+
+jr_zero_flag_on:
+cbw
+xchg ax, bx
+lea  si, [bx + si]
+xchg ax, bx
+LOAD_NEXT_INSTRUCTION 3
 
 OPCODE_DEFINE 021h   ; LD HL, d16
 
