@@ -39,10 +39,6 @@ public init_emulator
 ;; EXE ENTRY POINT
 
 
-; general theory: emulator core requires 64kb segments
-; and the emulated environment has 64kb space
-; so we prepare those segments (load files, etc) in bootstrap then jump in.
-
 
 PUSHA_MACRO   ; todo how much of this reg storage is necessary
 push  ds

@@ -450,7 +450,7 @@ OPCODE_DEFINE 03Eh   ; LD A, d8
 
 lodsb
 mov   cl, al
-inc   cl
+
 LOAD_NEXT_INSTRUCTION 2
 
 
@@ -1091,14 +1091,14 @@ lodsw
 jnz   do_call_nz
 LOAD_NEXT_INSTRUCTION 3
 do_call_nz:
-mov   word ptr ds:[di], si  ; store IP
 lea   di, [di - 2] ; push to stack.
+mov   word ptr ds:[di], si  ; store IP
 xchg  ax, si
 LOAD_NEXT_INSTRUCTION 6
 
 OPCODE_DEFINE 0C5h   ; PUSH BC
-mov    word ptr ds:[di], bp
 lea    di, [di - 2] ; push to stack.
+mov    word ptr ds:[di], bp
 LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0C6h   ; ADD A, d8
@@ -1107,8 +1107,8 @@ add   cl, al
 LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 0C7h   ; RST 0
-mov   word ptr ds:[di], si  ; store IP
 lea   di, [di - 2] ; push to stack.
+mov   word ptr ds:[di], si  ; store IP
 mov   si, 0
 LOAD_NEXT_INSTRUCTION 4
 
@@ -1125,6 +1125,7 @@ LOAD_NEXT_INSTRUCTION 5
 OPCODE_DEFINE 0C9h   ; RET
 mov   si, word ptr ds:[di]
 lea   di, [di + 2] ; pop off stack.
+LOAD_NEXT_INSTRUCTION 4
 
 
 OPCODE_DEFINE 0CAh   ; JP Z, a16
@@ -1162,15 +1163,15 @@ jz    do_call_z
 LOAD_NEXT_INSTRUCTION 3
 
 do_call_z:
-mov   word ptr ds:[di], si  ; store IP
 lea   di, [di - 2] ; push to stack.
+mov   word ptr ds:[di], si  ; store IP
 xchg  ax, si
 LOAD_NEXT_INSTRUCTION 6
 
 OPCODE_DEFINE 0CDh   ; CALL a16
 lodsw
-mov   word ptr ds:[di], si  ; store IP
 lea   di, [di - 2] ; push to stack.
+mov   word ptr ds:[di], si  ; store IP
 xchg  ax, si
 LOAD_NEXT_INSTRUCTION 6
 
@@ -1180,8 +1181,8 @@ adc  cl, al
 LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 0CFh   ; RST 1
-mov    word ptr ds:[di], si  ; store IP
 lea    di, [di - 2] ; push to stack.
+mov    word ptr ds:[di], si  ; store IP
 mov    si, 08h
 LOAD_NEXT_INSTRUCTION 4
 
@@ -1215,14 +1216,14 @@ lodsw
 jnc   do_call_nc
 LOAD_NEXT_INSTRUCTION 3
 do_call_nc:
-mov   word ptr ds:[di], si  ; store IP
 lea   di, [di - 2] ; push to stack.
+mov   word ptr ds:[di], si  ; store IP
 xchg  ax, si
 LOAD_NEXT_INSTRUCTION 6
 
 OPCODE_DEFINE 0D5h   ; PUSH DE
-mov    word ptr ds:[di], dx
 lea    di, [di - 2] ; push to stack.
+mov    word ptr ds:[di], dx
 LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0D6h   ; SUB d8
@@ -1231,8 +1232,8 @@ sub    cl, al
 LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 0D7h   ; RST 2
-mov    word ptr ds:[di], si  ; store IP
 lea    di, [di - 2] ; push to stack.
+mov    word ptr ds:[di], si  ; store IP
 mov    si, 010h
 LOAD_NEXT_INSTRUCTION 4
 
@@ -1267,8 +1268,8 @@ lodsw
 jc    do_call_c
 LOAD_NEXT_INSTRUCTION 3
 do_call_c:
-mov   word ptr ds:[di], si  ; store IP
 lea   di, [di - 2] ; push to stack.
+mov   word ptr ds:[di], si  ; store IP
 xchg  ax, si
 LOAD_NEXT_INSTRUCTION 6
 
@@ -1282,8 +1283,8 @@ sbb    cl, al
 LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 0DFh   ; RST 3
-mov    word ptr ds:[di], si  ; store IP
 lea    di, [di - 2] ; push to stack.
+mov    word ptr ds:[di], si  ; store IP
 mov    si, 018h
 LOAD_NEXT_INSTRUCTION 4
 
@@ -1317,8 +1318,8 @@ jmp   dword ptr cs:[BAD_OPCODE]
 LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0E5h   ; PUSH HL
-mov    word ptr ds:[di], bx
 lea    di, [di - 2] ; push to stack.
+mov    word ptr ds:[di], bx
 LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0E6h   ; AND d8
@@ -1327,8 +1328,8 @@ and    cl, al
 LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 0E7h   ; RST 4
-mov    word ptr ds:[di], si  ; store IP
 lea    di, [di - 2] ; push to stack.
+mov    word ptr ds:[di], si  ; store IP
 mov    si, 020h
 LOAD_NEXT_INSTRUCTION 4
 
@@ -1368,8 +1369,8 @@ xor    cl, al
 LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 0EFh   ; RST 5
-mov    word ptr ds:[di], si  ; store IP
 lea    di, [di - 2] ; push to stack.
+mov    word ptr ds:[di], si  ; store IP
 mov    si, 028h
 LOAD_NEXT_INSTRUCTION 4
 
@@ -1409,8 +1410,8 @@ LOAD_NEXT_INSTRUCTION 1
 OPCODE_DEFINE 0F5h   ; PUSH AF
 mov    al, cl
 lahf
-mov    word ptr ds:[di], ax
 lea    di, [di - 2] ; push to stack.
+mov    word ptr ds:[di], ax
 LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0F6h   ; OR d8
@@ -1419,8 +1420,8 @@ or     cl, al
 LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 0F7h   ; RST 6
-mov    word ptr ds:[di], si  ; store IP
 lea    di, [di - 2] ; push to stack.
+mov    word ptr ds:[di], si  ; store IP
 mov    si, 030h
 LOAD_NEXT_INSTRUCTION 4
 
