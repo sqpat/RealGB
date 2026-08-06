@@ -81,7 +81,7 @@ ENDIF
 ENDM
 
 SET_N_FLAG_ON MACRO
-   mov ch, 1
+   mov ch, 040h
 ENDM
 
 SET_N_FLAG_OFF MACRO
