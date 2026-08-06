@@ -1,0 +1,18 @@
+CCOPTS = -zp1 -oaxet -oi -zq -j -mm -0 -s -zdp -d__COMPILER_WATCOM
+
+GLOBOBJS = &
+ gb_init.obj &
+ gb_core1.obj &
+ gb_core2.obj
+
+realgb.exe : $(GLOBOBJS)
+ wlink @realgb.lnk
+ wstrip realgb.exe
+
+.asm.obj :
+ tasm /m6 $[*
+
+clean : .SYMBOLIC
+ del *.obj
+ del *.err
+ del realgb.exe
