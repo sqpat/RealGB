@@ -26,6 +26,7 @@ EXTRN CORE1_START
 EXTRN CORE2_START
 EXTRN pointer_to_core_1
 EXTRN pointer_to_core_2
+EXTRN BAD_OPCODE
 
 INIT SEGMENT
   ASSUME CS:INIT
@@ -102,6 +103,7 @@ sub   ax, 02000h
 mov   word ptr cs:[VARIABLE_core_location+2], ax
 mov   es, ax
 add   ax, 01000h
+mov   word ptr es:[BAD_OPCODE+2], cs
 mov   di, OFFSET pointer_to_core_2+2
 stosw
 mov   es, ax
@@ -110,13 +112,22 @@ mov   di, OFFSET pointer_to_core_1+2
 stosw
 
 
-mov  si, 0  ; initial IP
+mov  si, 0100h    ; initial PC
+mov  di, 0FFFEh  ; initial SP
+mov  bp, 00013h  ; initial BC
+mov  dx, 000D8h  ; initial DE
+mov  bx, 0014Dh  ; initial HL
+xor  ax, ax
+test ax, ax
 
 ; 3. jump into core
 
 push cs
 mov  ax, OFFSET FF_OPCODE_HANDLER_CORE1
 push ax 
+lodsb
+mov  ah, al
+mov  word ptr cs:[VARIABLE_core_location], ax
 
 
 jmp dword ptr cs:[VARIABLE_core_location]
