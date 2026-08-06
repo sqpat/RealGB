@@ -3,11 +3,15 @@
 INCLUDE gb_defs.inc
 
 EXTRN CORE2_START
+EXTRN BAD_OPCODE_DETECTED
 
-
+INIT SEGMENT
+  ASSUME CS:INIT
+ENDS
 CORE2 SEGMENT
   ASSUME CS:CORE2
 ENDS
+
 
 COMMENT @
 AX  = scratch
@@ -733,8 +737,8 @@ LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 079h   ; LD A, C
 xchg  ax, bp
-mov   cl, ah
-xchg  ax, bl
+mov   cl, al
+xchg  ax, bp
 LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 07Ah   ; LD A, D
@@ -1021,7 +1025,7 @@ LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0B9h   ; CP C
 xchg  ax, bp
-cmo   cl, al
+cmp   cl, al
 xchg  ax, bp
 LOAD_NEXT_INSTRUCTION 1
 
@@ -1051,83 +1055,390 @@ cmp    cl, cl
 LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0C0h   ; RET NZ
-
+jnz    do_ret_nz
+LOAD_NEXT_INSTRUCTION 2
+do_ret_nz:
+mov    si, word ptr ds:[di]
+lea    di, [di + 2] ; pop off stack.
+LOAD_NEXT_INSTRUCTION 5
 
 OPCODE_DEFINE 0C1h   ; POP BC
+mov    bp, word ptr ds:[di]
+lea    di, [di + 2] ; pop off stack.
+LOAD_NEXT_INSTRUCTION 3
+
 OPCODE_DEFINE 0C2h   ; JP NZ, a16
+lodsw
+jnz   jp_a16_zero_flag_off
+LOAD_NEXT_INSTRUCTION 3
+jp_a16_zero_flag_off:
+xchg ax, si
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0C3h   ; JP a16
+lodsw
+xchg  ax, si
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0C4h   ; CALL NZ, a16
+lodsw
+jnz   do_call_nz
+LOAD_NEXT_INSTRUCTION 3
+do_call_nz:
+mov   word ptr ds:[di], si  ; store IP
+lea   di, [di - 2] ; push to stack.
+xchg  ax, si
+LOAD_NEXT_INSTRUCTION 6
+
 OPCODE_DEFINE 0C5h   ; PUSH BC
+mov    word ptr ds:[di], bp
+lea    di, [di - 2] ; push to stack.
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0C6h   ; ADD A, d8
+lodsb
+add   cl, al
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0C7h   ; RST 0
+mov   word ptr ds:[di], si  ; store IP
+lea   di, [di - 2] ; push to stack.
+mov   si, 0
+LOAD_NEXT_INSTRUCTION 4
+
+
 OPCODE_DEFINE 0C8h   ; RET Z
+jz    do_ret_z
+LOAD_NEXT_INSTRUCTION 2
+
+do_ret_z:
+mov   si, word ptr ds:[di]
+lea   di, [di + 2] ; pop off stack.
+LOAD_NEXT_INSTRUCTION 5
+
 OPCODE_DEFINE 0C9h   ; RET
+mov   si, word ptr ds:[di]
+lea   di, [di + 2] ; pop off stack.
+
+
 OPCODE_DEFINE 0CAh   ; JP Z, a16
+lodsw
+jz    jp_a16_zero_flag_on
+LOAD_NEXT_INSTRUCTION 3
+jp_a16_zero_flag_on:
+xchg ax, si
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0CBh   ; FIRST BYTE OF TWO BYTE CALL
 
 ; jump into core 2 
-
-mov  ax, 3
+lodsb
+mov  ah, al
+mov  word ptr cs:[pointer_to_core_2], ax
+jmp  dword ptr cs:[pointer_to_core_2]
 
 pointer_to_core_2:
 public pointer_to_core_2
-dw 0000, SEG CORE2   ; TODO selfmodify
+dw CORE2_START, SEG CORE2 
+BAD_OPCODE:
+dw BAD_OPCODE_DETECTED, SEG INIT
 
 OPCODE_DEFINE 0CCh   ; CALL Z, a16
+lodsw
+jz    do_call_z
+LOAD_NEXT_INSTRUCTION 3
+
+do_call_z:
+mov   word ptr ds:[di], si  ; store IP
+lea   di, [di - 2] ; push to stack.
+xchg  ax, si
+LOAD_NEXT_INSTRUCTION 6
+
 OPCODE_DEFINE 0CDh   ; CALL a16
+lodsw
+mov   word ptr ds:[di], si  ; store IP
+lea   di, [di - 2] ; push to stack.
+xchg  ax, si
+LOAD_NEXT_INSTRUCTION 6
+
 OPCODE_DEFINE 0CEh   ; ADC A, d8
+lodsb
+adc  cl, al
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0CFh   ; RST 1
+mov    word ptr ds:[di], si  ; store IP
+lea    di, [di - 2] ; push to stack.
+mov    si, 08h
+LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0D0h   ; RET NC
+jnc    do_ret_nc
+LOAD_NEXT_INSTRUCTION 2
+do_ret_nc:
+mov    si, word ptr ds:[di]
+lea    di, [di + 2] ; pop off stack.
+LOAD_NEXT_INSTRUCTION 5
+
 OPCODE_DEFINE 0D1h   ; POP DE
+mov    dx, word ptr ds:[di]
+lea    di, [di + 2] ; pop off stack.
+LOAD_NEXT_INSTRUCTION 3
+
 OPCODE_DEFINE 0D2h   ; JP NC, a16
+lodsw
+jnc   jp_a16_nc
+LOAD_NEXT_INSTRUCTION 3
+jp_a16_nc:
+xchg ax, si
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0D3h   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0D4h   ; CALL NC, a16
+lodsw
+jnc   do_call_nc
+LOAD_NEXT_INSTRUCTION 3
+do_call_nc:
+mov   word ptr ds:[di], si  ; store IP
+lea   di, [di - 2] ; push to stack.
+xchg  ax, si
+LOAD_NEXT_INSTRUCTION 6
+
 OPCODE_DEFINE 0D5h   ; PUSH DE
+mov    word ptr ds:[di], dx
+lea    di, [di - 2] ; push to stack.
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0D6h   ; SUB d8
+lodsb
+sub    cl, al
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0D7h   ; RST 2
+mov    word ptr ds:[di], si  ; store IP
+lea    di, [di - 2] ; push to stack.
+mov    si, 010h
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0D8h   ; RET C
+jc     do_ret_c
+LOAD_NEXT_INSTRUCTION 2
+do_ret_c:
+mov    si, word ptr ds:[di]
+lea    di, [di + 2] ; pop off stack.
+LOAD_NEXT_INSTRUCTION 5
+
 OPCODE_DEFINE 0D9h   ; RETI
+; TODO interrupt stuff
+mov    si, word ptr ds:[di]
+lea    di, [di + 2] ; pop off stack.
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0DAh   ; JP C, a16
+lodsw
+jc    jp_a16_c
+LOAD_NEXT_INSTRUCTION 3
+jp_a16_c:
+xchg ax, si
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0DBh   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0DCh   ; CALL C, a16
+lodsw
+jc    do_call_c
+LOAD_NEXT_INSTRUCTION 3
+do_call_c:
+mov   word ptr ds:[di], si  ; store IP
+lea   di, [di - 2] ; push to stack.
+xchg  ax, si
+LOAD_NEXT_INSTRUCTION 6
+
 OPCODE_DEFINE 0DDh   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0DEh   ; SBC A, d8
+lodsb
+sbb    cl, al
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0DFh   ; RST 3
+mov    word ptr ds:[di], si  ; store IP
+lea    di, [di - 2] ; push to stack.
+mov    si, 018h
+LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0E0h   ; LD (a8), A
+lodsb
+mov    ah, 0FFh
+xchg   ax, bx
+mov    byte ptr ds:[bx], cl
+xchg   ax, bx
+LOAD_NEXT_INSTRUCTION 3
+
 OPCODE_DEFINE 0E1h   ; POP HL
+mov    bx, word ptr ds:[di]
+lea    di, [di + 2] ; pop off stack.
+LOAD_NEXT_INSTRUCTION 3
+
 OPCODE_DEFINE 0E2h   ; LD (C), A
+mov    ax, bp
+mov    ah, 0FFh
+xchg   ax, bx
+mov    byte ptr ds:[bx], cl
+xchg   ax, bx
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0E3h   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0E4h   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0E5h   ; PUSH HL
+mov    word ptr ds:[di], bx
+lea    di, [di - 2] ; push to stack.
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0E6h   ; AND d8
+lodsb
+and    cl, al
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0E7h   ; RST 4
+mov    word ptr ds:[di], si  ; store IP
+lea    di, [di - 2] ; push to stack.
+mov    si, 020h
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0E8h   ; ADD SP, s8
+lodsb
+cbw
+add    di, ax
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0E9h   ; JP HL
+mov    si, bx
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0EAh   ; LD (a16), A
+lodsw
+xchg   ax, bx
+mov    byte ptr ds:[bx], cl
+xchg   ax, bx
+LOAD_NEXT_INSTRUCTION 4
+
+
 OPCODE_DEFINE 0EBh   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0ECh   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0EDh   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0EEh   ; XOR d8
+lodsb
+xor    cl, al
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0EFh   ; RST 5
+mov    word ptr ds:[di], si  ; store IP
+lea    di, [di - 2] ; push to stack.
+mov    si, 028h
+LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0F0h   ; LD A, (a8)
+lodsb
+mov    ah, 0FFh
+xchg   ax, bx
+mov    cl, byte ptr ds:[bx]
+xchg   ax, bx
+LOAD_NEXT_INSTRUCTION 3
+
 OPCODE_DEFINE 0F1h   ; POP AF
+mov    ax, word ptr ds:[di]
+mov    cl, al
+sahf
+lea    di, [di + 2] ; pop off stack.
+LOAD_NEXT_INSTRUCTION 3
+
+
 OPCODE_DEFINE 0F2h   ; LD A, (C)
+mov    ax, bp
+mov    ah, 0FFh
+xchg   ax, bx
+mov    cl, byte ptr ds:[bx]
+xchg   ax, bx
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0F3h   ; DI
+; TODO interrupt stuff.
+LOAD_NEXT_INSTRUCTION 1
+
+
 OPCODE_DEFINE 0F4h   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0F5h   ; PUSH AF
+mov    al, cl
+lahf
+mov    word ptr ds:[di], ax
+lea    di, [di - 2] ; push to stack.
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0F6h   ; OR d8
+lodsb
+or     cl, al
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0F7h   ; RST 6
+mov    word ptr ds:[di], si  ; store IP
+lea    di, [di - 2] ; push to stack.
+mov    si, 030h
+LOAD_NEXT_INSTRUCTION 4
+
 OPCODE_DEFINE 0F8h   ; LD HL, SP+s8
+; todo flags
+lodsb
+cbw
+xchg   ax, bx
+lea    bx, [bx + di]
+LOAD_NEXT_INSTRUCTION 3
+
 OPCODE_DEFINE 0F9h   ; LD SP, HL
+mov    di, bx
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0FAh   ; LD A, (a16)
+lodsw
+xchg   ax, bx
+mov    cl, byte ptr ds:[bx]
+xchg   ax, bx
+LOAD_NEXT_INSTRUCTION 3
+
 OPCODE_DEFINE 0FBh   ; EI
+; TODO interrupt stuff.
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0FCh   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0FDh   ; xxxx
+jmp   dword ptr cs:[BAD_OPCODE]
+
 OPCODE_DEFINE 0FEh   ; CP d8
+lodsb
+cmp    cl, al
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0FFh   ; RST 7
+
+; todo...  int3? retf?
 
 
 

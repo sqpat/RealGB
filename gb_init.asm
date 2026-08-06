@@ -125,6 +125,10 @@ mov   ax, 04C00h
 int   021h
 
 
+BAD_OPCODE_DETECTED:
+public BAD_OPCODE_DETECTED
+jmp emulator_shutdown
+
 
 ;;; VARIABLES
 ;;; VARIABLES
