@@ -761,74 +761,298 @@ OPCODE_DEFINE 07Fh   ; LD A, A
 LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 080h   ; ADD A, B
+xchg  ax, bp
+add   cl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 081h   ; ADD A, C
+xchg  ax, bp
+add   cl, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 082h   ; ADD A, D
+add   cl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 083h   ; ADD A, E
+add   cl, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 084h   ; ADD A, H
+add   cl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 085h   ; ADD A, L
+add   cl, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 086h   ; ADD A, (HL)
+add   cl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 087h   ; ADD A, A
+add   cl, cl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 088h   ; ADC A, B
+xchg  ax, bp
+adc   cl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 089h   ; ADC A, C
+xchg  ax, bp
+adc   cl, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 08Ah   ; ADC A, D
+adc   cl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 08Bh   ; ADC A, E
+adc   cl, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 08Ch   ; ADC A, H
+adc   cl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 08Dh   ; ADC A, L
+adc   cl, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 08Eh   ; ADD AC (HL)
+adc   cl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 08Fh   ; ADC A, A
+adc   cl, cl
+LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 090h   ; SUB B
+xchg  ax, bp
+sub   cl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 091h   ; SUB C
+xchg  ax, bp
+sub   cl, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 092h   ; SUB D
+sub   cl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 093h   ; SUB E
+sub   cl, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 094h   ; SUB H
+sub   cl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 095h   ; SUB L
+sub   cl, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 096h   ; SUB (HL)
+sub   cl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 097h   ; SUB A
+sub   cl, cl
+LOAD_NEXT_INSTRUCTION 1
+
+
 OPCODE_DEFINE 098h   ; SBC B
+xchg  ax, bp
+sbb   cl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 099h   ; SBC C
+xchg  ax, bp
+sbb   cl, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 09Ah   ; SBC D
+sbb   cl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 09Bh   ; SBC E
+sbb   cl, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 09Ch   ; SBC H
+sbb   cl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 09Dh   ; SBC L
+sbb   cl, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 09Eh   ; SBC (HL)
+sbb   cl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 09Fh   ; SBC A
+sbb   cl, cl
+LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0A0h   ; AND B
+xchg  ax, bp
+and   cl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0A1h   ; AND C
+xchg  ax, bp
+and   cl, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0A2h   ; AND D
+and   cl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0A3h   ; AND E
+and   cl, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0A4h   ; AND H
+and   cl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0A5h   ; AND L
+and   cl, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0A6h   ; AND (HL)
+and   cl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0A7h   ; AND A
+and   cl, cl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0A8h   ; XOR B
+xchg  ax, bp
+xor   cl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0A9h   ; XOR C
+xchg  ax, bp
+xor   cl, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0AAh   ; XOR D
+xor   cl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0ABh   ; XOR E
+xor   cl, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0ACh   ; XOR H
+xor   cl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0ADh   ; XOR L
+xor   cl, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0AEh   ; XOR (HL)
+xor   cl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0AFh   ; XOR A
+xor   cl, cl
+LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0B0h   ; OR B
+xchg  ax, bp
+or    cl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0B1h   ; OR C
+xchg  ax, bp
+or    cl, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0B2h   ; OR D
+or    cl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0B3h   ; OR E
+or    cl, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0B4h   ; OR H
+or    cl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0B5h   ; OR L
+or    cl, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0B6h   ; OR (HL)
+or    cl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 0B7h   ; OR A
+or    cl, cl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0B8h   ; CP B
+xchg  ax, bp
+cmp   cl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0B9h   ; CP C
+xchg  ax, bp
+cmo   cl, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
+
 OPCODE_DEFINE 0BAh   ; CP D
+cmp    cl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0BBh   ; CP E
+cmp    cl, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0BCh   ; CP H
+cmp    cl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0BDh   ; CP L
+cmp    cl, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0BEh   ; CP (HL)
+cmp    cl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 0BFh   ; CP A
+cmp    cl, cl
+LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0C0h   ; RET NZ
+
+
 OPCODE_DEFINE 0C1h   ; POP BC
 OPCODE_DEFINE 0C2h   ; JP NZ, a16
 OPCODE_DEFINE 0C3h   ; JP a16
