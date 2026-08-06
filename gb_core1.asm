@@ -454,72 +454,311 @@ LOAD_NEXT_INSTRUCTION 1
 
 
 OPCODE_DEFINE 040h   ; LD B, B
+
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 041h   ; LD B, C
+
+xchg  ax, bp
+mov   ah, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 042h   ; LD B, D
+xchg  ax, bp
+mov   ah, dh
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 043h   ; LD B, E
+xchg  ax, bp
+mov   ah, dl
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 044h   ; LD B, H
+xchg  ax, bp
+mov   ah, bh
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 045h   ; LD B, L
+xchg  ax, bp
+mov   ah, bl
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 046h   ; LD B, (HL)
+xchg  ax, bp
+mov   ah, byte ptr ds:[bx]
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 2
+
+
 OPCODE_DEFINE 047h   ; LD B, A
+xchg  ax, bp
+mov   ah, cl
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
+
 OPCODE_DEFINE 048h   ; LD C, B
+xchg  ax, bp
+mov   al, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 049h   ; LD C, C
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 04Ah   ; LD C, D
+xchg  ax, bp
+mov   al, dh
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 04Bh   ; LD C, E
+xchg  ax, bp
+mov   al, dl
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 04Ch   ; LD C, H
+xchg  ax, bp
+mov   al, bh
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 04Dh   ; LD C, L
+xchg  ax, bp
+mov   al, bl
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 04Eh   ; LD C, (HL)
+xchg  ax, bp
+mov   al, byte ptr ds:[bx]
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 04Fh   ; LD C, A
+xchg  ax, bp
+mov   al, cl
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 
 OPCODE_DEFINE 050h   ; LD D, B
+xchg  ax, bp
+mov   dh, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
+
 OPCODE_DEFINE 051h   ; LD D, C
+xchg  ax, bp
+mov   dh, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 052h   ; LD D, D
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 053h   ; LD D, E
+mov   dh, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 054h   ; LD D, H
+mov   dh, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 055h   ; LD D, L
+mov   dh, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 056h   ; LD D, (HL)
+mov   dh, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 057h   ; LD D, A
+mov   dh, cl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 058h   ; LD E, B
+xchg  ax, bp
+mov   dl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 059h   ; LD E, C
+xchg  ax, bp
+mov   dl, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 05Ah   ; LD E, D
+mov   dl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 05Bh   ; LD E, E
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 05Ch   ; LD E, H
+mov   dl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 05Dh   ; LD E, L
+mov   dl, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 05Eh   ; LD E, (HL)
+mov   dl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 05Fh   ; LD E, A
+mov   dl, cl
+LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 060h   ; LD H, B
+xchg  ax, bp
+mov   bh, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 061h   ; LD H, C
+xchg  ax, bp
+mov   bh, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 062h   ; LD H, D
+mov   bh, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 063h   ; LD H, E
+mov   bh, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 064h   ; LD H, H
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 065h   ; LD H, L
+mov   bh, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 066h   ; LD H, (HL)
+mov   bh, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 067h   ; LD H, A
+mov   bh, cl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 068h   ; LD L, B
+xchg  ax, bp
+mov   bl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 069h   ; LD L, C
+xchg  ax, bp
+mov   bl, al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 06Ah   ; LD L, D
+mov   bl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 06Bh   ; LD L, E
+mov   bl, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 06Ch   ; LD L, H
+mov   bl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 06Dh   ; LD L, L
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 06Eh   ; LD L, (HL)
+mov   bl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 06Fh   ; LD L, A
+mov   bl, cl
+LOAD_NEXT_INSTRUCTION 1
+
 
 OPCODE_DEFINE 070h   ; LD (HL), B
+xchg  ax, bp
+mov   byte ptr ds:[bx], ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 071h   ; LD (HL), C
+xchg  ax, bp
+mov   byte ptr ds:[bx], al
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 072h   ; LD (HL), D
+mov   byte ptr ds:[bx], dh
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 073h   ; LD (HL), E
+mov   byte ptr ds:[bx], dl
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 074h   ; LD (HL), H
+mov   byte ptr ds:[bx], bh
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 075h   ; LD (HL), L
+mov   byte ptr ds:[bx],  bl
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 076h   ; HALT
+; TODO
+
 OPCODE_DEFINE 077h   ; LD (HL), A
+mov   byte ptr ds:[bx], cl
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 078h   ; LD A, B
+xchg  ax, bp
+mov   cl, ah
+xchg  ax, bp
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 079h   ; LD A, C
+xchg  ax, bp
+mov   cl, ah
+xchg  ax, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 07Ah   ; LD A, D
+mov   cl, dh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 07Bh   ; LD A, E
+mov   cl, dl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 07Ch   ; LD A, H
+mov   cl, bh
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 07Dh   ; LD A, L
+mov   cl, bl
+LOAD_NEXT_INSTRUCTION 1
+
 OPCODE_DEFINE 07Eh   ; LD A, (HL)
+mov   cl, byte ptr ds:[bx]
+LOAD_NEXT_INSTRUCTION 2
+
 OPCODE_DEFINE 07Fh   ; LD A, A
+LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 080h   ; ADD A, B
 OPCODE_DEFINE 081h   ; ADD A, C
