@@ -1,26 +1,40 @@
 
 
+COMPILE_8086 = 0
+COMPILE_186 = 1
+COMPILE_286 = 2
 
+COMPISA = COMPILE_8086
 
 PUSHA_MACRO MACRO
 
+  IF COMPISA GE COMPILE_186
+    pusha
+  ELSE
     push  ax	
     push  cx
     push  dx
     push  bx
     push  si
     push  di
+    push  bp
+  ENDIF
 ENDM
 
 
 POPA_MACRO MACRO
 
+  IF COMPISA GE COMPILE_186
+    popa
+  ELSE
+    pop   bp
     pop   di
     pop   si
     pop   bx
     pop   dx
     pop   cx
     pop   ax	
+  ENDIF
 ENDM
 
 
@@ -48,6 +62,18 @@ LOAD_NEXT_INSTRUCTION_NOCYCLES MACRO
     lodsb
     mov  ah, al
     jmp  ax
+ENDM
+
+
+ROL4_MACRO MACRO reg
+  IF COMPISA GE COMPILE_186
+    rol reg, 4
+  ELSE
+    rol reg, 1
+    rol reg, 1
+    rol reg, 1
+    rol reg, 1
+ENDIF
 ENDM
 
 

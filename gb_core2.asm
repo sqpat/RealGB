@@ -242,59 +242,50 @@ sar   cl, 1
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 030h   ; SWAP B
-lahf
 xchg  ax, bp
 ROL4_MACRO ah
+test  ah, ah
 xchg  ax, bp
-sahf
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 031h   ; SWAP C
-lahf
 xchg  ax, bp
 ROL4_MACRO al
+test  al, al
 xchg  ax, bp
-sahf
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 032h   ; SWAP D
-lahf
-ROL4_MACRO bl
-sahf
+ROL4_MACRO dh
+test  dh, dh
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 033h   ; SWAP E
-lahf
 ROL4_MACRO dl
-sahf
+test  dl, dl
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 034h   ; SWAP H
-lahf
 ROL4_MACRO bh
-sahf
+test  bh, bh
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 035h   ; SWAP L
-lahf
 ROL4_MACRO bl
-sahf
+test  bl, bl
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 036h   ; SWAP (HL)
-lahf
 mov   al, byte ptr ds:[bx]
 ROL4_MACRO al
 mov   byte ptr ds:[bx], al
-sahf
+test  al, al
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
 
 OPCODE_DEFINE 037h   ; SWAP A
-lahf
 ROL4_MACRO cl
-sahf
+test  cl, cl
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
-
 
 OPCODE_DEFINE 038h   ; SRL B
 xchg  ax, bp

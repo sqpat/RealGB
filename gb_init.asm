@@ -1,9 +1,15 @@
 ; gb_init  bootstraps the program.
 
-.8086
+INCLUDE gb_defs.inc
+
+
+IF COMPISA EQ 0
+    .8086
+ELSE
+    .286
+ENDIF
 .MODEL medium
 
-INCLUDE gb_defs.inc
 
 
 CORE1 SEGMENT
