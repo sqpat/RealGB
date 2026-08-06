@@ -1,9 +1,10 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/08/05 19:18:39
+Created on:       26/08/06 19:32:04
 Executable Image: realgb.exe
 creating a DOS executable
+Warning! W1172: stack size is less than 512 bytes
 
 
                         +------------+
@@ -32,9 +33,9 @@ CORE2                  CODE           AUTO           1000:0000       0000ffff
 _DATA                  DATA           DGROUP         2000:0000       00000000
 CORE1                                 AUTO           2000:0000       00000000
 CORE2                                 AUTO           2000:0000       00000000
-INIT                                  AUTO           2000:0000       00000032
-CORE2                                 AUTO           2000:0040       00000000
-CORE1                                 AUTO           2000:0040       00000000
+INIT                                  AUTO           2000:0000       00000071
+CORE2                                 AUTO           2000:0080       00000000
+CORE1                                 AUTO           2000:0080       00000000
 
 
                         +----------------+
@@ -47,20 +48,21 @@ CORE1                                 AUTO           2000:0040       00000000
 Address        Symbol
 =======        ======
 
+Module: gb_init.obj(gb_init.ASM)
+2000:0000      INIT_EMULATOR
 Module: gb_core1.obj(gb_core1.ASM)
 0000:cbce*     POINTER_TO_CORE_2
 0000:0000      CORE1_START
 Module: gb_core2.obj(gb_core2.ASM)
 1000:0000      CORE2_START
 Warning! W1014: stack segment not found
-Warning! W1023: no starting address found, using 0000:0000
 
 
                         +-----------------------+
                         |   Linker Statistics   |
                         +-----------------------+
 
-Stack size:  09e8 (2536.)
-Memory size:  00020040 (131136.)
-Entry point address: 0000:0000
+Stack size:  0100 (256.)
+Memory size:  00020080 (131200.)
+Entry point address: 2000:0000
 Link time: 00:00.55

@@ -22,7 +22,8 @@ EXTRN CORE2_START
 INIT SEGMENT
   ASSUME CS:INIT
 
-
+init_emulator:
+public init_emulator
 
 ;; EXE ENTRY POINT
 ;; EXE ENTRY POINT
@@ -53,11 +54,41 @@ mov  word ptr ds:[VARIABLE_exit_sp], sp
 
 ; 1. load rom into EMS page frame
 
+;INT 21,3D - Open File Using Handle
+mov   ax, 03D00h
+mov   dx, OFFSET rom_filename
+int   021h
+jc    nofileload  
 
+mov   word ptr cs:[VARIABLE_rom_file_handle], ax
+
+
+; INT 21,3F - Read From File or Device Using Handle
+
+xchg  ax, bx
+mov   ax, 08000h
+mov   ds, ax   ; emulator lives in 0x8000
+xor   dx, dx   
+mov   ah, 03Fh
+mov   cx, 32768
+int   021h
+
+jc    emulator_shutdown
+
+test  ax, ax  
+jns   done_loading_rom
+; load 32768 more
+
+mov   ah, 03Fh
+mov   cx, 32768
+mov   dx, cx
+int   021h
+
+jc    emulator_shutdown
+
+done_loading_rom:
 ; 2. initialize emualtor state
 
-mov ax, 08000h
-mov ds, ax   ; emulator lives in 0x8000
 ; todo: set up stack to be in 07000h or some such.
 
 mov  si, 0  ; initial IP
@@ -66,6 +97,16 @@ mov  si, 0  ; initial IP
 ;jmp dword ptr cs:[VARIABLE_core_location]
 
 
+emulator_shutdown:
+
+;INT 21,3E - Close File Using Handle
+
+mov   bx, word ptr cs:[VARIABLE_rom_file_handle]
+mov   ah, 03Eh
+int   021h
+
+
+nofileload:
 ;;; EXIT PROGRAM HERE
 
 quit_exit_program: ;  detect stack mismatch? probably fine if we made it here
@@ -94,6 +135,11 @@ VARIABLE_exit_sp:
 dw 0
 VARIABLE_core_location:
 dw CORE1_START, SEG CORE1
+VARIABLE_rom_file_handle:
+dw 0
+
+rom_filename:
+db "testrom.gb", 0
 
 ENDS
 

@@ -1,13 +1,12 @@
 option quiet
 option map
-option stack=2536
+option stack=256
+option start=INIT_EMULATOR
 debug all
 format dos
 name realgb
 
 file gb_init.obj
-NEWSEGMENT 
 file gb_core1.obj
-NEWSEGMENT 
 file gb_core2.obj
  
