@@ -19,18 +19,18 @@ ENDS
 COMMENT @
 AX  = scratch
 BX  = HL
-CH  = ??
+CH  = H FLAG
 CL  = A
 BP  = BC
 DX  = DE
+DS  = emulated 64k space segment. 
+SI  = PC
 DI  = SP
-DS  = emulated 64k space
-SI  = IP (or pc or whatever)
-SP  = ??
-CS  = emulator core
+SP  = (parent stack)
+CS  = current emulator opcode processing core
 ES  = ??
-SS  = garbage area 
-FLAGS emulate flags 
+SS  = emulator init segment.
+FLAGS emulate flags (ZF, AF, CF)
 @
 
 
@@ -1559,25 +1559,15 @@ OPCODE_DEFINE 0F1h   ; POP AF       ; Z? N? H? C?
       lea    di, [di + 2] ; pop off stack.
       mov    cl, ah  ; set accumulator
       xor    ah, ah  ; clear flags
-      shl    al, 1
-      jnc    no_zero_flag_restore
-      or     ah, 040h
-    no_zero_flag_restore:
-      shl    al, 1
-      SET_N_FLAG_OFF
-      jnc    no_n_flag_restore
-      mov    ah, 040h
-      SET_N_FLAG_ON
-    no_n_flag_restore:
-      shl    al, 1
-      jnc    no_half_carry_flag_restore
-      or     ah, 010h
-    no_half_carry_flag_restore:
-      shl    al, 1
-      jnc    no_carry_flag_restore
-      inc    ah
-    no_carry_flag_restore:
-      sahf
+      mov    ch, al
+      and    ch, 040h  ; H set.
+      shr    al, 1
+      mov    ah, al  ; ah has ZF/AF flags in place
+      shr    al, 1
+      shr    al, 1
+      shr    al, 1     ; carry flag in bit 1
+      sahf             ; set ZF/AF
+      rcr    al, 1     ; set carry flag
       LOAD_NEXT_INSTRUCTION 3
 
 OPCODE_DEFINE 0F2h   ; LD A, (C)    ; Z- N- H- C-
