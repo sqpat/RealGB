@@ -172,9 +172,8 @@ FF_OPCODE_HANDLER_CORE1:
 push cs
 PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_CORE1
  
-
-mov    word ptr ds:[di], si  ; store IP
-lea    di, [di - 2] ; push to stack.
+lea   di, [di - 2] ; push to stack.
+mov   word ptr ds:[di], si  ; store IP
 mov    si, 038h
 INCREMENT_CYCLES 4
 lodsb
