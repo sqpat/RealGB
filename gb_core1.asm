@@ -79,7 +79,7 @@ OPCODE_DEFINE 006h   ; LD B, d8     ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 007h   ; RLCA         ; Z0 N0 H0 C[7]
-    test  ax, ax    ; clear flags, known to be 0F0Fh 
+    test  ax, ax    ; clear flags, known to be 0707h 
     rol   cl, 1     ; set carry
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION 1
