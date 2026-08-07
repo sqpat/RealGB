@@ -290,9 +290,8 @@ OPCODE_DEFINE 026h   ; LD H, d8     ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 027h   ; DAA          ; Z+ N- H0 C[7]
-
-
-    test ch, ch 
+COMMENT @
+    test ch, N_FLAG_BIT 
     jz   cleared_N
     set_N:
       LAHF
@@ -310,62 +309,61 @@ OPCODE_DEFINE 027h   ; DAA          ; Z+ N- H0 C[7]
       LAHF
       AND AH, 0EFh ; clear AF
       SAHF
-      LOAD_NEXT_INSTRUCTION 1
-  
 
-    COMMENT @
+      LOAD_NEXT_INSTRUCTION 1
+    @
+
     lahf
     test  ah, 1   ; test carry flag
     mov   al, 0
-    xchg  ax, cx     ; ch = flags, ah = N
+    xchg  ax, cx     ; ch = flags, ah = N. cl is value to add.
     jnz   daa_c_flag_on
-    test  ah, ah
+    test  ah, N_FLAG_BIT
     jnz   skip_daa_high_digit_adjust ; skip if sub flag on
     cmp   al, 099h
     jbe   skip_daa_high_digit_adjust
     daa_c_flag_on:
-    mov    cl, 060h
+    mov   cl, 060h
+    inc   byte ptr cs:[SELFMODIFY_set_carry_flag+2]
     skip_daa_high_digit_adjust:
 
 
     test  ch, 10h    ; test AF
-    mov   ch, al ; backup
+    mov   ch, al ; backup old digit
     jnz   daa_af_flag_on
-    test  ah, ah
-    jnz   skip_daa_low_digit_adjust ; skip if sub flag on
+    test  ah, N_FLAG_BIT
+    jnz   sub_difference ; skip if sub flag on
     and   al, 0Fh
     cmp   al, 9
     jbe   skip_daa_low_digit_adjust
-    daa_cf_flag_on:
+    daa_af_flag_on:
     add   cl, 6
-    inc   byte ptr cs:[SELFMODIFY_set_carry_flag+2] ;
-
     skip_daa_low_digit_adjust:
 
+    ; add back value.
+
     ; set carry flag if cl
-    test  ah, ah
+    test  ah, N_FLAG_BIT
     jz    add_difference
-    sub_difference
+    sub_difference:
     neg   cl
     add_difference:
     add   cl, ch  ; ch has accumulator backup, cl has amount to add. cl is new accumulator.
+    finished_daa_result:
     mov   ch, ah  ; restore N Flag
     mov   ah, 0   ; flags set
     jnz   dont_set_zero
-    or    ah, 040h  ; set new zero
+    or    ah, 040h  ; set zero flag
     dont_set_zero:
-
     SELFMODIFY_set_carry_flag:
-    or    ah, 040h  ; set new carry flag. IDEA: inc ah vs nops?
-
+    or    ah, 0  ; set new carry flag. IDEA: inc ah vs nops?
     mov   byte ptr cs:[SELFMODIFY_set_carry_flag+2], 0  ; gross.
-
     sahf
 
     ; N flag left alone.
     ; zero flag set if zero
     LOAD_NEXT_INSTRUCTION 1
-    @
+    
 
 OPCODE_DEFINE 028h   ; JR Z, s8     ; Z- N- H- C-
     lodsb
@@ -1556,19 +1554,32 @@ OPCODE_DEFINE 0F1h   ; POP AF       ; Z? N? H? C?
     ; 0  0     cf (c)
 
       mov    ax, word ptr ds:[di]
-      lea    di, [di + 2] ; pop off stack.
-      mov    cl, ah  ; set accumulator
-      xor    ah, ah  ; clear flags
-      mov    ch, al
-      and    ch, 040h  ; H set.
-      shr    al, 1
-      mov    ah, al  ; ah has ZF/AF flags in place
-      shr    al, 1
-      shr    al, 1
-      shr    al, 1     ; carry flag in bit 1
-      sahf             ; set ZF/AF
-      rcr    al, 1     ; set carry flag
+      add    di, 2   ; pop off stack.
+      mov    cl, ah   ; set accumulator
+      mov    ah, al   ; copy flags
+      mov    ch, N_FLAG_BIT  
+      and    ch, al ; N set.
+      and    ax, 0A010h
+      add    ax, (512 - 16) ; bit 9 set only if bit 4 was set
+      shr    ah, 1    ; ah has ZF/AF/CF flags in place
+      sahf             ; set ZF/AF/CF
       LOAD_NEXT_INSTRUCTION 3
+
+
+      COMMENT @
+
+    MOV AX, [DI]
+    ADD DI, 2 ; clobbering flags is fine, they're getting set anyway
+    XCHG AL, AH ; flags to AH, A to AL
+    MOV CX, 040FFh
+    AND CX, AX ; set A, set N
+    OR AH, 1 ; set a bit so AAA will carry to bit 2
+    AND AX, 0F100h ; AL = 0, clear extra AH bits
+    SAHF ; AF = C
+    AAA ; +1 to AH if AF set, setting bit 2 to C
+    SHR AH, 1 ; align bits with x86 flags
+    SAHF ; ZF = Z, AF = H, CF = C
+  @
 
 OPCODE_DEFINE 0F2h   ; LD A, (C)    ; Z- N- H- C-
     mov    ax, bp
