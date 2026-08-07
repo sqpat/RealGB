@@ -1,6 +1,6 @@
 option quiet
 option map
-option stack=256
+option stack=1024
 option start=INIT_EMULATOR
 debug all
 format dos

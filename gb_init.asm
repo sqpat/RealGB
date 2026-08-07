@@ -24,12 +24,13 @@ ENDS
 
 EXTRN CORE1_START
 EXTRN CORE2_START
-EXTRN pointer_to_core_1
-EXTRN pointer_to_core_2
-EXTRN BAD_OPCODE
 
-INIT SEGMENT
+
+
+
+INIT SEGMENT "STACK"
   ASSUME CS:INIT
+
 
 init_emulator:
 public init_emulator
@@ -73,6 +74,13 @@ mov   word ptr cs:[VARIABLE_rom_file_handle], ax
 xchg  ax, bx
 mov   ax, 08000h
 mov   ds, ax   ; emulator lives in 0x8000
+mov   es, ax   ; emulator lives in 0x8000
+mov   cx, 32768
+xor   ax, ax
+xor   di, di
+rep   stosw  ; clear memory first... todo use FF isntead of 00?
+push  cs
+pop   es  ; restore es
 xor   dx, dx   
 mov   ah, 03Fh
 mov   cx, 32768
@@ -95,20 +103,16 @@ done_loading_rom:
 ; 2. initialize emualtor state
 
 mov   ax, cs
-sub   ax, 02000h
+mov   word ptr es:[VARIABLE_BAD_OPCODE_handler+2], ax
+sub   ax, 02000h ; core1
 mov   word ptr cs:[VARIABLE_core_location+2], ax
-mov   es, ax
-add   ax, 01000h
-mov   word ptr es:[BAD_OPCODE+2], cs
-mov   di, OFFSET pointer_to_core_2+2
-stosw
-mov   es, ax
-sub   ax, 01000h
-mov   di, OFFSET pointer_to_core_1+2
-stosw
+mov   word ptr cs:[VARIABLE_pointer_to_core_1+2], ax
+add   ax, 01000h ; core2
+mov   word ptr cs:[VARIABLE_pointer_to_core_2+2], ax
 
 
-mov  si, 0100h    ; initial PC
+
+mov  si, 0100h   ; initial PC
 mov  di, 0FFFEh  ; initial SP
 mov  bp, 00013h  ; initial BC
 mov  dx, 000D8h  ; initial DE
@@ -119,8 +123,8 @@ test ax, ax
 ; 3. jump into core
 
 push cs
-mov  ax, OFFSET FF_OPCODE_HANDLER_CORE1
-push ax 
+PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_CORE1
+
 lodsb
 mov  ah, al
 mov  word ptr cs:[VARIABLE_core_location], ax
@@ -166,8 +170,8 @@ ALIGN 2
 FF_OPCODE_HANDLER_CORE1:
 
 push cs
-mov  ax, OFFSET FF_OPCODE_HANDLER_CORE1
-push ax 
+PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_CORE1
+ 
 
 mov    word ptr ds:[di], si  ; store IP
 lea    di, [di - 2] ; push to stack.
@@ -185,8 +189,8 @@ dw OFFSET VARIABLE_core_location
 ALIGN 2
 FF_OPCODE_HANDLER_CORE2:
 push cs
-mov  ax, OFFSET FF_OPCODE_HANDLER_CORE1 
-push ax 
+PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_CORE1 
+
 
 lahf
 or    cl, (1 SHL 7)
@@ -209,11 +213,24 @@ PUBLIC FF_OPCODE_HANDLER_CORE2
 ALIGN 2
 VARIABLE_exit_sp:
 dw 0
+
 VARIABLE_core_location:
-dw CORE1_START
-dw SEG CORE1
+dw CORE1_START, 9
 VARIABLE_rom_file_handle:
 dw 0
+
+VARIABLE_pointer_to_core_1:
+dw CORE1_START, 0 
+VARIABLE_pointer_to_core_2:
+dw CORE2_START, 0 
+
+VARIABLE_BAD_OPCODE_handler:
+dw BAD_OPCODE_DETECTED, SEG INIT
+
+
+public VARIABLE_pointer_to_core_1
+public VARIABLE_pointer_to_core_2
+public VARIABLE_BAD_OPCODE_handler
 
 rom_filename:
 db "testrom.gb", 0

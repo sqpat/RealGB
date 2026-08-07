@@ -6,6 +6,8 @@ INCLUDE gb_defs.inc
 
 EXTRN CORE1_START
 EXTRN FF_OPCODE_HANDLER_CORE1
+EXTRN VARIABLE_pointer_to_core_1
+EXTRN VARIABLE_pointer_to_core_2
 
 CORE1 SEGMENT
     ASSUME CS:CORE1
@@ -24,9 +26,6 @@ OPCODE_DEFINE 000h   ; RLC B        ; Z+ N0 H0 C[7]
     CORE2_START:
     public CORE2_START
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
-    pointer_to_core_1:  ; todo move to ss
-    public pointer_to_core_1
-    dw CORE1_START, SEG CORE1
 
 
 OPCODE_DEFINE 001h   ; RLC C        ; Z+ N0 H0 C[7]
@@ -461,323 +460,640 @@ OPCODE_DEFINE 03Fh   ; SRL A        ; Z+ N0 H0 C[0]
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 040h   ; BIT 0, B     ; Zn N0 H1 C-
+    lahf
     test  bp, ((1 SHL 0) SHL 8)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 041h   ; BIT 0, C     ; Zn N0 H1 C-
+    lahf
     test  bp, (1 SHL 0)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 042h   ; BIT 0, D     ; Zn N0 H1 C-
-    test  dh, (1 SHL 0)
-    SET_N_FLAG_OFF
+    lahf            ; preserve CF state
+    test  dh, (1 SHL 0)  ; set ZF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 043h   ; BIT 0, E     ; Zn N0 H1 C-
-    test  dl, (1 SHL 0)
-    SET_N_FLAG_OFF
+    lahf            ; preserve CF state
+    test  dl, (1 SHL 0)  ; set ZF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 044h   ; BIT 0, H     ; Zn N0 H1 C-
-    test  bh, (1 SHL 0)
-    SET_N_FLAG_OFF
+    lahf            ; preserve CF state
+    test  bh, (1 SHL 0)  ; set ZF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+
 OPCODE_DEFINE 045h   ; BIT 0, L     ; Zn N0 H1 C-
-    test  bl, (1 SHL 0)
-    SET_N_FLAG_OFF
+    lahf            ; preserve CF state
+    test  bl, (1 SHL 0)  ; set ZF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 046h   ; BIT 0, (HL)  ; Zn N0 H1 C-
+    lahf
     test  byte ptr ds:[bx], (1 SHL 0)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 3
 
 OPCODE_DEFINE 047h   ; BIT 0, A     ; Zn N0 H1 C-
+    lahf
     test  cl, (1 SHL 0)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 048h   ; BIT 1, B     ; Zn N0 H1 C-
+    lahf
     test  bp, ((1 SHL 1) SHL 8)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 049h   ; BIT 1, C     ; Zn N0 H1 C-
+    lahf
     test  bp, (1 SHL 1)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 04Ah   ; BIT 1, D     ; Zn N0 H1 C-
+    lahf
     test  dh, (1 SHL 1)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 04Bh   ; BIT 1, E     ; Zn N0 H1 C-
+    lahf
     test  dl, (1 SHL 1)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 04Ch   ; BIT 1, H     ; Zn N0 H1 C-
+    lahf
     test  bh, (1 SHL 1)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 04Dh   ; BIT 1, L     ; Zn N0 H1 C-
+    lahf
     test  bl, (1 SHL 1)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 04Eh   ; BIT 1, (HL)  ; Zn N0 H1 C-
+    lahf
     test  byte ptr ds:[bx], (1 SHL 1)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 3
 
 OPCODE_DEFINE 04Fh   ; BIT 1, A     ; Zn N0 H1 C-
+    lahf
     test  cl, (1 SHL 1)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 050h   ; BIT 2, B     ; Zn N0 H1 C-
+    lahf
     test  bp, ((1 SHL 2) SHL 8)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 051h   ; BIT 2, C     ; Zn N0 H1 C-
+    lahf
     test  bp, (1 SHL 2)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 052h   ; BIT 2, D     ; Zn N0 H1 C-
+    lahf
     test  dh, (1 SHL 2)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 053h   ; BIT 2, E     ; Zn N0 H1 C-
+    lahf
     test  dl, (1 SHL 2)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 054h   ; BIT 2, H     ; Zn N0 H1 C-
+    lahf
     test  bh, (1 SHL 2)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 055h   ; BIT 2, L     ; Zn N0 H1 C-
+    lahf
     test  bl, (1 SHL 2)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 056h   ; BIT 2, (HL)  ; Zn N0 H1 C-
+    lahf
     test  byte ptr ds:[bx], (1 SHL 2)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 3
 
 OPCODE_DEFINE 057h   ; BIT 2, A     ; Zn N0 H1 C-
+    lahf
     test  cl, (1 SHL 2)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 058h   ; BIT 3, B     ; Zn N0 H1 C-
+    lahf
     test  bp, ((1 SHL 3) SHL 8)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 059h   ; BIT 3, C     ; Zn N0 H1 C-
+    lahf
     test  bp, (1 SHL 3)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 05Ah   ; BIT 3, D     ; Zn N0 H1 C-
+    lahf
     test  dh, (1 SHL 3)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 05Bh   ; BIT 3, E     ; Zn N0 H1 C-
+    lahf
     test  dl, (1 SHL 3)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 05Ch   ; BIT 3, H     ; Zn N0 H1 C-
+    lahf
     test  bh, (1 SHL 3)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 05Dh   ; BIT 3, L     ; Zn N0 H1 C-
+    lahf
     test  bl, (1 SHL 3)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 05Eh   ; BIT 3, (HL)  ; Zn N0 H1 C-
+    lahf
     test  byte ptr ds:[bx], (1 SHL 3)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 3
 
 OPCODE_DEFINE 05Fh   ; BIT 3, A     ; Zn N0 H1 C-
+    lahf
     test  cl, (1 SHL 3)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 060h   ; BIT 4, B     ; Zn N0 H1 C-
+    lahf
     test  bp, ((1 SHL 4) SHL 8)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 061h   ; BIT 4, C     ; Zn N0 H1 C-
+    lahf
     test  bp, (1 SHL 4)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 062h   ; BIT 4, D     ; Zn N0 H1 C-
+    lahf
     test  dh, (1 SHL 4)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 063h   ; BIT 4, E     ; Zn N0 H1 C-
+    lahf
     test  dl, (1 SHL 4)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 064h   ; BIT 4, H     ; Zn N0 H1 C-
+    lahf
     test  bh, (1 SHL 4)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 065h   ; BIT 4, L     ; Zn N0 H1 C-
+    lahf
     test  bl, (1 SHL 4)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 066h   ; BIT 4, (HL)  ; Zn N0 H1 C-
+    lahf
     test  byte ptr ds:[bx], (1 SHL 4)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 3
 
 OPCODE_DEFINE 067h   ; BIT 4, A     ; Zn N0 H1 C-
+    lahf
     test  cl, (1 SHL 4)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 068h   ; BIT 5, B     ; Zn N0 H1 C-
+    lahf
     test  bp, ((1 SHL 5) SHL 8)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 069h   ; BIT 5, C     ; Zn N0 H1 C-
+    lahf
     test  bp, (1 SHL 5)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 06Ah   ; BIT 5, D     ; Zn N0 H1 C-
+    lahf
     test  dh, (1 SHL 5)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 06Bh   ; BIT 5, E     ; Zn N0 H1 C-
+    lahf
     test  dl, (1 SHL 5)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 06Ch   ; BIT 5, H     ; Zn N0 H1 C-
+    lahf
     test  bh, (1 SHL 5)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 06Dh   ; BIT 5, L     ; Zn N0 H1 C-
+    lahf
     test  bl, (1 SHL 5)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 06Eh   ; BIT 5, (HL)  ; Zn N0 H1 C-
+    lahf
     test  byte ptr ds:[bx], (1 SHL 5)
-    SET_N_FLAG_OFF
+    rcr   ah, 1
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 3
 
 OPCODE_DEFINE 06Fh   ; BIT 5, A     ; Zn N0 H1 C-
+    lahf
     test  cl, (1 SHL 5)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 070h   ; BIT 6, B     ; Zn N0 H1 C-
+    lahf
     test  bp, ((1 SHL 6) SHL 8)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 071h   ; BIT 6, C     ; Zn N0 H1 C-
+    lahf
     test  bp, (1 SHL 6)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 072h   ; BIT 6, D     ; Zn N0 H1 C-
+    lahf
     test  dh, (1 SHL 6)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 073h   ; BIT 6, E     ; Zn N0 H1 C-
+    lahf
     test  dl, (1 SHL 6)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 074h   ; BIT 6, H     ; Zn N0 H1 C-
+    lahf
     test  bh, (1 SHL 6)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 075h   ; BIT 6, L     ; Zn N0 H1 C-
+    lahf
     test  bl, (1 SHL 6)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 076h   ; BIT 6, (HL)  ; Zn N0 H1 C-
+    lahf
     test  byte ptr ds:[bx], (1 SHL 6)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 3
 
 OPCODE_DEFINE 077h   ; BIT 6, A     ; Zn N0 H1 C-
+    lahf
     test  cl, (1 SHL 6)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 078h   ; BIT 7, B     ; Zn N0 H1 C-
+    lahf
     test  bp, ((1 SHL 7) SHL 8)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 079h   ; BIT 7, C     ; Zn N0 H1 C-
+    lahf
     test  bp, (1 SHL 7)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 07Ah   ; BIT 7, D     ; Zn N0 H1 C-
+    lahf
     test  dh, (1 SHL 7)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 07Bh   ; BIT 7, E     ; Zn N0 H1 C-
+    lahf
     test  dl, (1 SHL 7)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 07Ch   ; BIT 7, H     ; Zn N0 H1 C-
+    lahf
     test  bh, (1 SHL 7)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 07Dh   ; BIT 7, L     ; Zn N0 H1 C-
+    lahf
     test  bl, (1 SHL 7)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 07Eh   ; BIT 7, (HL)  ; Zn N0 H1 C-
+    lahf
     test  byte ptr ds:[bx], (1 SHL 7)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 3
 
 OPCODE_DEFINE 07Fh   ; BIT 7, A     ; Zn N0 H1 C-
+    lahf
     test  cl, (1 SHL 7)
-    SET_N_FLAG_OFF
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 

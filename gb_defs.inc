@@ -53,19 +53,27 @@ ENDM
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
     INCREMENT_CYCLES cycles
     pop  ax
-    mov  ax, OFFSET FF_OPCODE_HANDLER_CORE1
-    push ax 
+    PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_CORE1
 
     lodsb
     mov  ah, al
-    mov  word ptr cs:[pointer_to_core_1], ax
-    jmp  dword ptr cs:[pointer_to_core_1]
+    mov  word ptr ss:[VARIABLE_pointer_to_core_1], ax
+    jmp  dword ptr ss:[VARIABLE_pointer_to_core_1]
 ENDM
 
 LOAD_NEXT_INSTRUCTION_NOCYCLES MACRO
     lodsb
     mov  ah, al
     jmp  ax
+ENDM
+
+PUSH_IMMEDIATE_MACRO MACRO  imm
+  IF COMPISA GE COMPILE_186
+    push  OFFSET imm
+  ELSE
+    mov   ax, OFFSET imm
+    push  ax
+  ENDIF
 ENDM
 
 
@@ -77,7 +85,7 @@ ROL4_MACRO MACRO reg
     rol reg, 1
     rol reg, 1
     rol reg, 1
-ENDIF
+  ENDIF
 ENDM
 
 SET_N_FLAG_ON MACRO

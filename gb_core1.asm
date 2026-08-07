@@ -3,8 +3,10 @@
 INCLUDE gb_defs.inc
 
 EXTRN CORE2_START
-EXTRN BAD_OPCODE_DETECTED
+EXTRN VARIABLE_BAD_OPCODE_handler
 EXTRN FF_OPCODE_HANDLER_CORE2
+EXTRN VARIABLE_pointer_to_core_1
+EXTRN VARIABLE_pointer_to_core_2
 
 INIT SEGMENT
     ASSUME CS:INIT
@@ -141,7 +143,7 @@ OPCODE_DEFINE 00Fh   ; RRCA         ; Z0 N0 H0 C[0]
 
 OPCODE_DEFINE 010h   ; STOP         ; Z- N- H- C-
     ; TODO.
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 011h   ; LD DE, d16   ; Z- N- H- C-
@@ -189,7 +191,16 @@ OPCODE_DEFINE 018h   ; JR s8        ; Z- N- H- C-
     xchg ax, bx
     lea  si, [si + bx]
     xchg ax, bx
+    lahf
+    cmp  al, 0FEh 
+    je   infinite_loop_exit_emulator 
+    sahf
     LOAD_NEXT_INSTRUCTION 3
+
+    infinite_loop_exit_emulator:
+    sahf
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
+
 
 OPCODE_DEFINE 019h   ; ADD HL, DE   ; Z- N0 H11 C15
     lahf
@@ -778,7 +789,7 @@ OPCODE_DEFINE 075h   ; LD (HL), L   ; Z- N- H- C-
 
 OPCODE_DEFINE 076h   ; HALT         ; Z- N- H- C-
     ; TODO
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 077h   ; LD (HL), A   ; Z- N- H- C-
@@ -1225,8 +1236,8 @@ OPCODE_DEFINE 0C4h   ; CALL NZ, a16 ; Z- N- H- C-
       LOAD_NEXT_INSTRUCTION 3
     do_call_nz:
       lea   di, [di - 2] ; push to stack.
-      mov   word ptr ds:[di], si  ; store IP
       xchg  ax, si
+      mov   word ptr ds:[di], ax  ; store IP
       LOAD_NEXT_INSTRUCTION 6
 
 OPCODE_DEFINE 0C5h   ; PUSH BC      ; Z- N- H- C-
@@ -1270,20 +1281,12 @@ OPCODE_DEFINE 0CAh   ; JP Z, a16    ; Z- N- H- C-
 OPCODE_DEFINE 0CBh   ; FIRST BYTE OF TWO BYTE CALL
     ; jump into core 2 
     pop  ax
-    mov  ax, OFFSET FF_OPCODE_HANDLER_CORE2
-    push ax 
-
+    PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_CORE2
     lodsb
     mov  ah, al
-    mov  word ptr cs:[pointer_to_core_2], ax
-    jmp  dword ptr cs:[pointer_to_core_2]
+    mov  word ptr ss:[VARIABLE_pointer_to_core_2], ax
+    jmp  dword ptr ss:[VARIABLE_pointer_to_core_2]
 
-    pointer_to_core_2:
-      public pointer_to_core_2
-      dw CORE2_START, 0 
-    BAD_OPCODE:
-      public BAD_OPCODE
-      dw BAD_OPCODE_DETECTED, SEG INIT
 
 OPCODE_DEFINE 0CCh   ; CALL Z, a16  ; Z- N- H- C-
     lodsw
@@ -1291,15 +1294,15 @@ OPCODE_DEFINE 0CCh   ; CALL Z, a16  ; Z- N- H- C-
       LOAD_NEXT_INSTRUCTION 3
     do_call_z:
       lea   di, [di - 2] ; push to stack.
-      mov   word ptr ds:[di], si  ; store IP
       xchg  ax, si
+      mov   word ptr ds:[di], ax  ; store IP
       LOAD_NEXT_INSTRUCTION 6
 
 OPCODE_DEFINE 0CDh   ; CALL a16     ; Z- N- H- C-
     lodsw
     lea   di, [di - 2] ; push to stack.
-    mov   word ptr ds:[di], si  ; store IP
     xchg  ax, si
+    mov   word ptr ds:[di], ax  ; store IP
     LOAD_NEXT_INSTRUCTION 6
 
 OPCODE_DEFINE 0CEh   ; ADC A, d8    ; Z+ N0 H[3] C[7]
@@ -1336,7 +1339,7 @@ OPCODE_DEFINE 0D2h   ; JP NC, a16   ; Z- N- H- C-
       LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0D3h   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0D4h   ; CALL NC, a16 ; Z- N- H- C-
@@ -1345,8 +1348,8 @@ OPCODE_DEFINE 0D4h   ; CALL NC, a16 ; Z- N- H- C-
       LOAD_NEXT_INSTRUCTION 3
     do_call_nc:
       lea   di, [di - 2] ; push to stack.
-      mov   word ptr ds:[di], si  ; store IP
       xchg  ax, si
+      mov   word ptr ds:[di], ax  ; store IP
       LOAD_NEXT_INSTRUCTION 6
 
 OPCODE_DEFINE 0D5h   ; PUSH DE      ; Z- N- H- C-
@@ -1389,7 +1392,7 @@ OPCODE_DEFINE 0DAh   ; JP C, a16    ; Z- N- H- C-
       LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0DBh   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0DCh   ; CALL C, a16  ; Z- N- H- C-
@@ -1398,12 +1401,12 @@ OPCODE_DEFINE 0DCh   ; CALL C, a16  ; Z- N- H- C-
       LOAD_NEXT_INSTRUCTION 3
     do_call_c:
       lea   di, [di - 2] ; push to stack.
-      mov   word ptr ds:[di], si  ; store IP
       xchg  ax, si
+      mov   word ptr ds:[di], ax  ; store IP
       LOAD_NEXT_INSTRUCTION 6
 
 OPCODE_DEFINE 0DDh   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0DEh   ; SBC A, d8    ; Z+ N1 H[3] C[7]
@@ -1424,7 +1427,24 @@ OPCODE_DEFINE 0E0h   ; LD (a8), A   ; Z- N- H- C-
     xchg   ax, bx
     mov    byte ptr ds:[bx], cl
     xchg   ax, bx
+
+    lahf
+    cmp    al, 1    
+    je     handle_serial_write
+    sahf
+
     LOAD_NEXT_INSTRUCTION 3
+    handle_serial_write:
+    sahf
+    ; print charcter to screen
+    mov    ah, 0Eh
+    mov    al, cl 
+    push   bx
+    mov    bx, 0
+    int    010h    ; INT 10,E - Write Text in Teletype Mode
+    pop    bx
+    LOAD_NEXT_INSTRUCTION 3
+
 
 OPCODE_DEFINE 0E1h   ; POP HL       ; Z- N- H- C-
     mov    bx, word ptr ds:[di]
@@ -1440,11 +1460,11 @@ OPCODE_DEFINE 0E2h   ; LD (C), A    ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 0E3h   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0E4h   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0E5h   ; PUSH HL      ; Z- N- H- C-
@@ -1493,15 +1513,15 @@ OPCODE_DEFINE 0EAh   ; LD (a16), A  ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0EBh   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0ECh   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0EDh   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0EEh   ; XOR d8        ; Z+ N0 H0 C0
@@ -1573,7 +1593,7 @@ OPCODE_DEFINE 0F3h   ; DI           ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0F4h   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0F5h   ; PUSH AF      ; Z- N- H- C-
@@ -1643,11 +1663,11 @@ OPCODE_DEFINE 0FBh   ; EI           ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0FCh   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0FDh   ; xxxx         ; Z- N- H- C-
-    jmp   dword ptr cs:[BAD_OPCODE]
+    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0FEh   ; CP d8        ; Z+ N1 H[3] C[7]
