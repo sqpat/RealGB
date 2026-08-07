@@ -207,7 +207,7 @@ OPCODE_DEFINE 018h   ; RR B         ; Z+ N0 H0 C[0]
 OPCODE_DEFINE 019h   ; RR C         ; Z+ N0 H0 C[0]
     xchg  ax, bp
     rcr   al, 1
-    xchg  ax, bp
+    mov   bp, ax   ; store result
     lahf           ; get flags for carry check in bit 0
     test  al, al   ; set zero flag, clear AF
     ror   ah, 1    ; set carry flag
@@ -265,7 +265,7 @@ OPCODE_DEFINE 01Fh   ; RR A         ; Z+ N0 H0 C[0]
 OPCODE_DEFINE 020h   ; SLA B        ; Z+ N0 H0 C[0]
     xchg  ax, bp
     test  ah, 07Fh    ; set ZF, clear AF/CF
-    shl   ah, 1
+    rcl   ah, 1
     xchg  ax, bp
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
@@ -273,44 +273,44 @@ OPCODE_DEFINE 020h   ; SLA B        ; Z+ N0 H0 C[0]
 OPCODE_DEFINE 021h   ; SLA C        ; Z+ N0 H0 C[0]
     xchg  ax, bp
     test  al, 07Fh    ; set ZF, clear AF/CF
-    shl   al, 1
+    rcl   al, 1
     xchg  ax, bp
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 022h   ; SLA D        ; Z+ N0 H0 C[0]
     test  dh, 07Fh    ; set ZF, clear AF/CF
-    shl   dh, 1
+    rcl   dh, 1
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 023h   ; SLA E        ; Z+ N0 H0 C[0]
     test  dl, 07Fh    ; set ZF, clear AF/CF
-    shl   dl, 1
+    rcl   dl, 1
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 024h   ; SLA H        ; Z+ N0 H0 C[0]
     test  bh, 07Fh    ; set ZF, clear AF/CF
-    shl   bh, 1
+    rcl   bh, 1
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 025h   ; SLA L        ; Z+ N0 H0 C[0]
     test  bl, 07Fh    ; set ZF, clear AF/CF
-    shl   bl, 1
+    rcl   bl, 1
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 026h   ; SLA (HL)     ; Z+ N0 H0 C[0]
     test  byte ptr ds:[bx], 07Fh    ; set ZF, clear AF/CF
-    shl   byte ptr ds:[bx], 1
+    rcl   byte ptr ds:[bx], 1
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
 
 OPCODE_DEFINE 027h   ; SLA A        ; Z+ N0 H0 C[0]
     test  cl, 07Fh    ; set ZF, clear AF/CF
-    shl   cl, 1
+    rcl   cl, 1
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
@@ -923,7 +923,11 @@ OPCODE_DEFINE 06Dh   ; BIT 5, L     ; Zn N0 H1 C-
 OPCODE_DEFINE 06Eh   ; BIT 5, (HL)  ; Zn N0 H1 C-
     lahf
     test  byte ptr ds:[bx], (1 SHL 5)
-    rcr   ah, 1
+    rcr   ah, 1     ; restore CF state, preserve ZF
+    lahf            ; get state
+    or    ah, 010h  ; AF ON
+    sahf            ; set full state
+    SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 3
 
 OPCODE_DEFINE 06Fh   ; BIT 5, A     ; Zn N0 H1 C-
@@ -1095,7 +1099,6 @@ OPCODE_DEFINE 07Fh   ; BIT 7, A     ; Zn N0 H1 C-
     sahf            ; set full state
     SET_N_FLAG_OFF  ; N off
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
-
 
 OPCODE_DEFINE 080h   ; RES 0, B     ; Z- N- H- C-
     lahf

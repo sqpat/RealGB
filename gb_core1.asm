@@ -139,6 +139,7 @@ OPCODE_DEFINE 00Eh   ; LD C, d8     ; Z- N- H- C-
 OPCODE_DEFINE 00Fh   ; RRCA         ; Z0 N0 H0 C[0]
     test  ax, ax    ; clear flags, known to be 0F0Fh 
     ror   cl, 1     ; set carry
+    SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 010h   ; STOP         ; Z- N- H- C-
@@ -1009,6 +1010,9 @@ OPCODE_DEFINE 0A0h   ; AND B        ; Z+ N0 H1 C0
     xchg  ax, bp
     and   cl, ah
     xchg  ax, bp
+    lahf
+    or    ah, 010h       ; turn on AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION 1
 
