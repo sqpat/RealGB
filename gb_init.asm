@@ -42,23 +42,60 @@ public init_emulator
 
 
 PUSHA_MACRO   ; todo how much of this reg storage is necessary
+
+mov   word ptr ds:[VARIABLE_original_ds], ds
+
 push  ds
 push  es
 
 push  cs
-push  cs
-pop   ds
 pop   es
 mov  word ptr ds:[VARIABLE_exit_sp], sp
 
 
 ;;; BOOTSTRAP EMULATOR HERE
 
-; 0. init EMS page frame
+
+; 1. get comamnd line arg(s)
+
+xor   cx, cx
+mov   cl, byte ptr ds:[0080h]
+jcxz  no_command_line
+mov   si, 0082h
+skip_next_space:
+lodsb
+cmp   al, " "
+jne   found_start
+dec   cx
+jmp   skip_next_space
+found_start:
+dec   si
+dec   cx
+mov   di, offset rom_filename
+rep   movsb  ; set filename..
+lodsb
+cmp   al, 0Dh
+je    skip_newline_filename
+cmp   al, 0Ah
+je    skip_newline_filename
+cmp   al, " "
+je    skip_newline_filename
+stosb
+skip_newline_filename:
+mov   al, 0
+stosb
+
+no_command_line:
+
+push  cs
+pop   ds
+
+
+; 2. init EMS page frame
 
 ; TODO. For now just shove it in segment 0x8000 until 
 
-; 1. load rom into EMS page frame
+; 3. load rom into EMS page frame
 
 ;INT 21,3D - Open File Using Handle
 mov   ax, 03D00h
@@ -177,6 +214,9 @@ ALIGN 2
 VARIABLE_exit_sp:
 dw 0
 
+VARIABLE_original_ds:
+dw 0
+
 VARIABLE_core_location:
 dw CORE1_START, 9
 VARIABLE_rom_file_handle:
@@ -197,6 +237,8 @@ public VARIABLE_BAD_OPCODE_handler
 
 rom_filename:
 db "testrom.gb", 0
+dw 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+dw 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  ; leave space for filename
 
 ENDS
 
