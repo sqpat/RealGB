@@ -123,7 +123,7 @@ test ax, ax
 ; 3. jump into core
 
 push cs
-PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_CORE1
+PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
 
 lodsb
 mov  ah, al
@@ -166,43 +166,7 @@ BAD_OPCODE_DETECTED:
 public BAD_OPCODE_DETECTED
 jmp emulator_shutdown
 
-ALIGN 2
-FF_OPCODE_HANDLER_CORE1:
 
-push cs
-PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_CORE1
- 
-lea   di, [di - 2] ; push to stack.
-mov   word ptr ds:[di], si  ; store IP
-mov    si, 038h
-INCREMENT_CYCLES 4
-lodsb
-mov    ah, al
-mov    word ptr cs:[VARIABLE_core_location], ax
-
-db 02Eh, 0ffh, 02eh
-dw OFFSET VARIABLE_core_location
-;jmp    dword ptr cs:[VARIABLE_core_location]
-
-
-ALIGN 2
-FF_OPCODE_HANDLER_CORE2:
-push cs
-PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_CORE1 
-
-
-lahf
-or    cl, (1 SHL 7)
-sahf
-INCREMENT_CYCLES 2
-lodsb
-mov    ah, al
-mov    word ptr cs:[VARIABLE_core_location], ax
-jmp dword ptr cs:[VARIABLE_core_location]
-
-
-PUBLIC FF_OPCODE_HANDLER_CORE1
-PUBLIC FF_OPCODE_HANDLER_CORE2
 
 
 ;;; VARIABLES

@@ -5,9 +5,9 @@ INCLUDE gb_defs.inc
 ; CB prefix instruction handling
 
 EXTRN CORE1_START
-EXTRN FF_OPCODE_HANDLER_CORE1
+
 EXTRN VARIABLE_pointer_to_core_1
-EXTRN VARIABLE_pointer_to_core_2
+
 
 CORE1 SEGMENT
     ASSUME CS:CORE1
@@ -1863,18 +1863,19 @@ OPCODE_DEFINE 0FEh   ; SET 7, (HL)  ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
 
 OPCODE_DEFINE 0FFh   ; SET 7, A     ; Z- N- H- C-
-    retf
+    ret  ; jmp to FF_OPCODE_HANDLER_OFFSET; 
 
-    COMMENT @
+
+; FF handler
+ORG FF_OPCODE_HANDLER_OFFSET
+    PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET  ; put this back on stack.
     lahf
     or    cl, (1 SHL 7)
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
-    @
 
 
-
-    ENDS  ; CORE2
+ENDS  ; CORE2
 
 
     END

@@ -4,8 +4,6 @@ INCLUDE gb_defs.inc
 
 EXTRN CORE2_START
 EXTRN VARIABLE_BAD_OPCODE_handler
-EXTRN FF_OPCODE_HANDLER_CORE2
-EXTRN VARIABLE_pointer_to_core_1
 EXTRN VARIABLE_pointer_to_core_2
 
 INIT SEGMENT
@@ -788,6 +786,7 @@ OPCODE_DEFINE 075h   ; LD (HL), L   ; Z- N- H- C-
 
 OPCODE_DEFINE 076h   ; HALT         ; Z- N- H- C-
     ; TODO
+    ; burn cycles until interrupt?
     jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
@@ -1282,8 +1281,6 @@ OPCODE_DEFINE 0CAh   ; JP Z, a16    ; Z- N- H- C-
 
 OPCODE_DEFINE 0CBh   ; FIRST BYTE OF TWO BYTE CALL
     ; jump into core 2 
-    pop  ax
-    PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_CORE2
     lodsb
     mov  ah, al
     mov  word ptr ss:[VARIABLE_pointer_to_core_2], ax
@@ -1682,8 +1679,16 @@ OPCODE_DEFINE 0FEh   ; CP d8        ; Z+ N1 H[3] C[7]
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 0FFh   ; RST 7        ; Z- N- H- C-
-    retf
-    ; todo...  test
+    ret  ; jump to 
+
+ORG FF_OPCODE_HANDLER_OFFSET
+; FF handler
+    PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET  ; put this back on stack.
+    lea   di, [di - 2] ; push to stack.
+    mov   word ptr ds:[di], si  ; store IP
+    mov   si, 038h
+    LOAD_NEXT_INSTRUCTION 4
+
 
 
 
