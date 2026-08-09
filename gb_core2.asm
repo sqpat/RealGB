@@ -5,8 +5,8 @@ INCLUDE gb_defs.inc
 ; CB prefix instruction handling
 
 EXTRN CORE1_START
-
 EXTRN VARIABLE_pointer_to_core_1
+EXTRN VARIABLE_CYCLE_COUNT
 
 
 CORE1 SEGMENT
@@ -318,6 +318,9 @@ OPCODE_DEFINE 028h   ; SRA B        ; Z+ N0 H0 C[0]
     xchg  ax, bp
     sar   ah, 1
     xchg  ax, bp
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
@@ -326,38 +329,59 @@ OPCODE_DEFINE 029h   ; SRA C        ; Z+ N0 H0 C[0]
     xchg  ax, bp
     sar   al, 1
     xchg  ax, bp
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 
 OPCODE_DEFINE 02Ah   ; SRA D        ; Z+ N0 H0 C[0]
     sar   dh, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 
 OPCODE_DEFINE 02Bh   ; SRA E        ; Z+ N0 H0 C[0]
     sar   dl, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 02Ch   ; SRA H        ; Z+ N0 H0 C[0]
     sar   bh, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 02Dh   ; SRA L        ; Z+ N0 H0 C[0]
     sar   bl, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 02Eh   ; SRA (HL)     ; Z+ N0 H0 C[0]
     sar   byte ptr ds:[bx], 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
 
 OPCODE_DEFINE 02Fh   ; SRA A        ; Z+ N0 H0 C[0]
     sar   cl, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
@@ -419,6 +443,9 @@ OPCODE_DEFINE 038h   ; SRL B        ; Z+ N0 H0 C[0]
     xchg  ax, bp
     shr   ah, 1
     xchg  ax, bp
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
@@ -426,36 +453,57 @@ OPCODE_DEFINE 039h   ; SRL C        ; Z+ N0 H0 C[0]
     xchg  ax, bp
     shr   al, 1
     xchg  ax, bp
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 03Ah   ; SRL D        ; Z+ N0 H0 C[0]
     shr   dh, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 03Bh   ; SRL E        ; Z+ N0 H0 C[0]
     shr   dl, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 03Ch   ; SRL H        ; Z+ N0 H0 C[0]
     shr   bh, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 03Dh   ; SRL L        ; Z+ N0 H0 C[0]
     shr   bl, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 03Eh   ; SRL (HL)     ; Z+ N0 H0 C[0]
     shr   byte ptr ds:[bx], 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
 
 OPCODE_DEFINE 03Fh   ; SRL A        ; Z+ N0 H0 C[0]
     shr   cl, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
     SET_N_FLAG_OFF
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 

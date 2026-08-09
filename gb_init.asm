@@ -43,14 +43,14 @@ public init_emulator
 
 PUSHA_MACRO   ; todo how much of this reg storage is necessary
 
-mov   word ptr ds:[VARIABLE_original_ds], ds
+mov   word ptr cs:[VARIABLE_original_ds], ds
 
 push  ds
 push  es
 
 push  cs
 pop   es
-mov  word ptr ds:[VARIABLE_exit_sp], sp
+mov  word ptr cs:[VARIABLE_exit_sp], sp
 
 
 ;;; BOOTSTRAP EMULATOR HERE
@@ -101,8 +101,9 @@ pop   ds
 mov   ax, 03D00h
 mov   dx, OFFSET rom_filename
 int   021h
-jc    nofileload  
-
+jnc   doloadfile
+jmp   nofileload
+doloadfile:
 mov   word ptr cs:[VARIABLE_rom_file_handle], ax
 
 
@@ -139,6 +140,12 @@ jc    emulator_shutdown
 done_loading_rom:
 ; 2. initialize emualtor state
 
+; INT 1A,0 - Read System Clock Counter
+xor   ax, ax
+int   01Ah
+mov   word ptr cs:[VARIABLE_HOST_START_TIME+0], dx
+mov   word ptr cs:[VARIABLE_HOST_START_TIME+2], cx
+
 mov   ax, cs
 mov   word ptr es:[VARIABLE_BAD_OPCODE_handler+2], ax
 sub   ax, 02000h ; core1
@@ -172,11 +179,192 @@ jmp dword ptr cs:[VARIABLE_core_location]
 
 emulator_shutdown:
 
+; INT 1A,0 - Read System Clock Counter
+xor   ax, ax
+int   01Ah
+sub   dx, word ptr cs:[VARIABLE_HOST_START_TIME+0]
+sbb   cx, word ptr cs:[VARIABLE_HOST_START_TIME+2]
+mov   word ptr cs:[VARIABLE_HOST_ELAPSED_TIME+0], dx
+mov   word ptr cs:[VARIABLE_HOST_ELAPSED_TIME+2], cx
+
+
+
 ;INT 21,3E - Close File Using Handle
 
 mov   bx, word ptr cs:[VARIABLE_rom_file_handle]
 mov   ah, 03Eh
 int   021h
+
+push  cs
+pop   ds
+
+IFDEF DEBUG_CYCLE_COUNTER
+    
+    les   ax, dword ptr ds:[VARIABLE_CYCLE_COUNT]
+    mov   dx, es
+
+    mov   di, 1
+    mov   si, 086A0h;   di:si 100,000 in hex 
+    xor   cx, cx
+
+    loop_sub_100k:
+    inc   cx
+    sub   ax, si
+    sbb   dx, di
+    jnc   loop_sub_100k
+
+
+    add   ax, si
+    adc   dx, di
+    dec   cx
+
+    ; cx has count in 100,000s. 
+
+    mov   bx, 10
+    div   bx
+    add   byte ptr ds:[gb_cycles_counted_start+12], dl
+    cwd
+    div   bx
+    add   byte ptr ds:[gb_cycles_counted_start+11], dl
+    cwd
+    div   bx
+    add   byte ptr ds:[gb_cycles_counted_start+10], dl
+    cwd
+    div   bx
+    add   byte ptr ds:[gb_cycles_counted_start+8], dl
+    cwd
+    div   bx
+    add   byte ptr ds:[gb_cycles_counted_start+7], dl
+
+    xchg  ax, cx
+    cwd
+    div   bx
+    add   byte ptr ds:[gb_cycles_counted_start+6], dl
+    cwd
+    div   bx
+    add   byte ptr ds:[gb_cycles_counted_start+4], dl
+    cwd
+    div   bx
+    add   byte ptr ds:[gb_cycles_counted_start+3], dl
+    cwd
+    div   bx
+    add   byte ptr ds:[gb_cycles_counted_start+2], dl
+    cwd
+    div   bx
+    add   byte ptr ds:[gb_cycles_counted_start+0], dl
+
+
+    les   ax, dword ptr cs:[VARIABLE_HOST_ELAPSED_TIME+0]   
+    mov   dx, es
+    push  cs
+    pop   es
+
+    ; lets count seconds....
+    xor   cx, cx
+    xor   di, di
+    mov   bx, 18
+    mov   si, 19
+
+    ; divide by 18.2 (instead of 18.206). good enough?
+
+    sub_more_seconds:
+        sub   ax, bx  ; 18
+        sbb   dx, di 
+        jc    done_counting_seconds
+        inc   cx
+        sub   ax, bx  ; 18
+        sbb   dx, di 
+        jc    done_counting_seconds
+        inc   cx
+        sub   ax, si  ; 19
+        sbb   dx, di 
+        jc    done_counting_seconds_plusone
+        inc   cx
+        sub   ax, bx  ; 18
+        sbb   dx, di 
+        jc    done_counting_seconds
+        inc   cx
+        sub   ax, bx  ; 18
+        sbb   dx, di 
+        jc    done_counting_seconds
+        inc   cx
+        jmp   sub_more_seconds
+
+    done_counting_seconds_plusone:
+        inc ax
+
+    done_counting_seconds:
+        add   ax, bx  ; 18
+        ; we are lazy and dividing by 20 as an approximation... i.e. shift right once and use that digit as the decimal
+        shr   ax, 1
+        add   byte ptr ds:[host_cycles_counted_start+4], al
+        mov   ax, cx
+        cwd
+        mov   bx, 10
+        div   bx
+        add   byte ptr ds:[host_cycles_counted_start+2], dl
+        cwd
+        div   bx
+        add   byte ptr ds:[host_cycles_counted_start+1], dl
+        cwd
+        div   bx
+        add   byte ptr ds:[host_cycles_counted_start+0], dl
+        cwd
+
+
+; 0x10000  XT ticks  = 1 hr
+; 0x100000 GB cycles = 1 second
+
+; GB cycles * 0xE10E = XT ticks (0x100000 gb cycles = 18.2 xt ticks per second) 
+; so ((gb cycles / 0xE10E) * 60) / XTticks) = fps
+; or gb cycles / (xt ticks * 0x3c0) = fps
+
+    mov   ax, word ptr cs:[VARIABLE_HOST_ELAPSED_TIME+0]   
+    mov   dx, 03C0h 
+    mul   dx
+    ;dx:ax 
+
+    ;add   byte ptr ds:[host_fps+4], dl
+
+    les   cx, dword ptr ds:[VARIABLE_CYCLE_COUNT]
+    mov   si, es
+
+
+    ;divide dx:ax by si:cx
+    xor   di, di
+
+loop_count_fps:
+    sub   cx, ax
+    sbb   si, dx
+    inc   di
+    jnc   loop_count_fps
+    add   cx, ax 
+    adc   si, dx 
+    dec   di
+
+    mov   ax, di
+    cwd
+    div   bx
+    add   byte ptr ds:[host_fps+2], dl
+    cwd
+    div   bx
+    add   byte ptr ds:[host_fps+1], dl
+    cwd
+    div   bx
+    add   byte ptr ds:[host_fps+0], dl
+
+    push  cs
+    pop   es
+
+    mov   dx, OFFSET gb_cycles_counted
+    mov   ah, 09h
+    push  cs
+    pop   ds
+    int   021h
+
+
+
+ENDIF
 
 
 nofileload:
@@ -230,7 +418,29 @@ dw CORE2_START, 0
 VARIABLE_BAD_OPCODE_handler:
 dw BAD_OPCODE_DETECTED, SEG INIT
 
+VARIABLE_CYCLE_COUNT:
+dw 0, 0
 
+VARIABLE_HOST_START_TIME:
+dw 0, 0
+
+VARIABLE_HOST_ELAPSED_TIME:
+dw 0, 0
+
+gb_cycles_counted:
+db 0Ah, 0Dh, "Game Boy Cycles: "
+gb_cycles_counted_start:
+db '0,000,000,000'
+
+host_cycles_counted:
+db "   Host Runtime: "
+host_cycles_counted_start:
+db '000.0 sec   FPS: '
+host_fps:
+db '000.0$'
+
+
+public VARIABLE_CYCLE_COUNT
 public VARIABLE_pointer_to_core_1
 public VARIABLE_pointer_to_core_2
 public VARIABLE_BAD_OPCODE_handler
