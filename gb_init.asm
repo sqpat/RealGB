@@ -448,8 +448,22 @@ VARIABLE_cycles_until_next_int_serial:
 dw 0FFFFh
 VARIABLE_cycles_until_next_int_joypad:
 dw 0FFFFh
-VARIABLE_pending_interrupt_flags:
+
+; write in one word.
+VARIABLE_IE_interrupt_enable_FFFF:
+db 0
+VARIABLE_interrupt_pending_flags:
+db 0
+VARIABLE_IF_interrupt_flag_FF0F:
 dw 0
+VARIABLE_current_timer_control_ticks:
+dw 256 * 64
+VARIABLE_pending_cx_in_interrupt:
+dw 0
+
+VARIABLE_EMULATOR_MEMORY_SEGMENT:
+dw EMULATOR_MEMORY_SEGMENT
+
 
 gb_cycles_counted:
 db 0Ah, 0Dh, "Game Boy Cycles: "
@@ -463,15 +477,18 @@ db '000.0 sec   FPS: '
 host_fps:
 db '000.0$'
 
-
-
-
+public VARIABLE_interrupt_pending_flags
+public VARIABLE_EMULATOR_MEMORY_SEGMENT
+public VARIABLE_pending_cx_in_interrupt
+public VARIABLE_IE_interrupt_enable_FFFF
+public VARIABLE_IF_interrupt_flag_FF0F
+public VARIABLE_current_timer_control_ticks
 public VARIABLE_cycles_until_next_int_vblank
 public VARIABLE_cycles_until_next_int_stat
 public VARIABLE_cycles_until_next_int_timer
 public VARIABLE_cycles_until_next_int_serial
 public VARIABLE_cycles_until_next_int_joypad
-public VARIABLE_pending_interrupt_flags
+
 
 public VARIABLE_cycles_since_last_handler
 public VARIABLE_CYCLE_COUNT
