@@ -52,7 +52,19 @@ IFDEF DEBUG_CYCLE_COUNTER
       adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
       sahf
   ENDM
+  INCREMENT_CYCLES_IO MACRO
+      pushf
+      mov  ax, word ptr ss:[VARIABLE_pending_cycle_count]
+      add  word ptr ss:[VARIABLE_CYCLE_COUNT+0], ax
+      adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
+      popf
+  ENDM
+
 ELSE
+  INCREMENT_CYCLES_IO MACRO
+
+  ENDM
+
   INCREMENT_CYCLES MACRO cycles
 
   ENDM
@@ -65,6 +77,15 @@ LOAD_NEXT_INSTRUCTION MACRO cycles
     mov  ah, al
     jmp  ax
 ENDM
+
+
+LOAD_NEXT_INSTRUCTION_FROM_IO MACRO 
+    INCREMENT_CYCLES_IO 
+    lodsb
+    mov  ah, al
+    jmp  ax
+ENDM
+
 
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
     INCREMENT_CYCLES cycles
@@ -117,6 +138,18 @@ OPCODE_DEFINE MACRO byte
     ORG ( &byte shl 8) + &byte
 ENDM
 
+IO_READ_OFFSET = 0A0h
+IO_WRITE_OFFSET = 0C8h
+
+IO_WRITE_DEFINE MACRO byte
+    ORG ( &byte shl 8) + IO_WRITE_OFFSET
+ENDM
+
+
+
+IO_READ_DEFINE MACRO byte
+    ORG ( &byte shl 8) + IO_READ_OFFSET
+ENDM
 
 
 

@@ -6,6 +6,8 @@ EXTRN CORE2_START
 EXTRN VARIABLE_BAD_OPCODE_handler
 EXTRN VARIABLE_pointer_to_core_2
 EXTRN VARIABLE_CYCLE_COUNT
+EXTRN VARIABLE_pending_cycle_count
+EXTRN VARIABLE_IME_flag
 
 INIT SEGMENT
     ASSUME CS:INIT
@@ -143,6 +145,8 @@ OPCODE_DEFINE 00Fh   ; RRCA         ; Z0 N0 H0 C[0]
 
 OPCODE_DEFINE 010h   ; STOP         ; Z- N- H- C-
     ; TODO.
+    mov   byte ptr ds:[0FF04h], 0 ; reset timer
+
     jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
 
@@ -1425,26 +1429,19 @@ OPCODE_DEFINE 0E0h   ; LD (a8), A   ; Z- N- H- C-
     lodsb
     mov    ah, 0FFh
     xchg   ax, bx
-    mov    byte ptr ds:[bx], cl
+    mov    byte ptr ds:[bx], cl ; todo write after test
     xchg   ax, bx
-
     lahf
-    cmp    al, 1    
-    je     handle_serial_write
-    sahf
-
+    test  al, al
+    jns   handle_io_write_0
+    sahf    
     LOAD_NEXT_INSTRUCTION 3
-    handle_serial_write:
+  handle_io_write_0:
     sahf
-    ; print charcter to screen
-    mov    ah, 0Eh
-    mov    al, cl 
-    push   bx
-    mov    bx, 0
-    int    010h    ; INT 10,E - Write Text in Teletype Mode
-    pop    bx
-    LOAD_NEXT_INSTRUCTION 3
-
+    mov   ah, al
+    mov   al, IO_WRITE_OFFSET
+    mov   word ptr ss:[VARIABLE_pending_cycle_count], 3
+    jmp   ax  ; IO handler 
 
 OPCODE_DEFINE 0E1h   ; POP HL       ; Z- N- H- C-
     mov    bx, word ptr ds:[di]
@@ -1455,9 +1452,19 @@ OPCODE_DEFINE 0E2h   ; LD (C), A    ; Z- N- H- C-
     mov    ax, bp
     mov    ah, 0FFh
     xchg   ax, bx
-    mov    byte ptr ds:[bx], cl
+    mov    byte ptr ds:[bx], cl ; todo write after test
     xchg   ax, bx
+    lahf
+    test  al, al
+    jns   handle_io_write_1
+    sahf    
     LOAD_NEXT_INSTRUCTION 2
+  handle_io_write_1:
+    sahf
+    mov   ah, al
+    mov   al, IO_WRITE_OFFSET
+    mov   word ptr ss:[VARIABLE_pending_cycle_count], 2
+    jmp   ax  ; IO handler 
 
 OPCODE_DEFINE 0E3h   ; xxxx         ; Z- N- H- C-
     jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
@@ -1507,10 +1514,25 @@ OPCODE_DEFINE 0E9h   ; JP HL        ; Z- N- H- C-
 
 OPCODE_DEFINE 0EAh   ; LD (a16), A  ; Z- N- H- C-
     lodsw
-    xchg   ax, bx
-    mov    byte ptr ds:[bx], cl
-    xchg   ax, bx
+    xchg  ax, bx
+    mov   byte ptr ds:[bx], cl
+    xchg  ax, bx
+    mov   al, ah
+    lahf
+    inc   al
+    jz    check_lo_byte_write ; todo write after test
+    not_io_write:
+    sahf
     LOAD_NEXT_INSTRUCTION 4
+  check_lo_byte_write:
+    mov   al, byte ptr ds:[si-2]
+    test  al, al
+    js    not_io_write
+    sahf
+    mov   ah, al
+    mov   al, IO_WRITE_OFFSET
+    mov   word ptr ss:[VARIABLE_pending_cycle_count], 4
+    jmp   ax
 
 OPCODE_DEFINE 0EBh   ; xxxx         ; Z- N- H- C-
     jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
@@ -1542,7 +1564,17 @@ OPCODE_DEFINE 0F0h   ; LD A, (a8)   ; Z- N- H- C-
     xchg   ax, bx
     mov    cl, byte ptr ds:[bx]
     xchg   ax, bx
+    lahf
+    test  al, al
+    jns   handle_io_read_0
+    sahf    
     LOAD_NEXT_INSTRUCTION 3
+  handle_io_read_0:
+    sahf
+    mov   ah, al
+    mov   al, IO_READ_OFFSET
+    mov   word ptr ss:[VARIABLE_pending_cycle_count], 3
+    jmp   ax  ; IO handler 
 
 OPCODE_DEFINE 0F1h   ; POP AF       ; Z? N? H? C?
     ; gb   x86 (lahf)
@@ -1589,10 +1621,21 @@ OPCODE_DEFINE 0F2h   ; LD A, (C)    ; Z- N- H- C-
     xchg   ax, bx
     mov    cl, byte ptr ds:[bx]
     xchg   ax, bx
-    LOAD_NEXT_INSTRUCTION 2
+    lahf
+    test  al, al
+    jns   handle_io_read_1
+    sahf    
+    LOAD_NEXT_INSTRUCTION 3
+  handle_io_read_1:
+    sahf
+    mov   ah, al
+    mov   al, IO_READ_OFFSET
+    mov   word ptr ss:[VARIABLE_pending_cycle_count], 2
+    jmp   ax  ; IO handler 
+
 
 OPCODE_DEFINE 0F3h   ; DI           ; Z- N- H- C-
-    ; TODO interrupt stuff.
+    mov    byte ptr ss:[VARIABLE_IME_flag], 0
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0F4h   ; xxxx         ; Z- N- H- C-
@@ -1659,10 +1702,27 @@ OPCODE_DEFINE 0FAh   ; LD A, (a16)  ; Z- N- H- C-
     xchg   ax, bx
     mov    cl, byte ptr ds:[bx]
     xchg   ax, bx
+    mov   al, ah
+    lahf
+    inc   al
+    jz    check_lo_byte_read
+    jns   handle_io_read_2
+    not_io_read:
+    sahf    
     LOAD_NEXT_INSTRUCTION 3
+  handle_io_read_2:
+  check_lo_byte_read:
+    mov   al, byte ptr ds:[si-2]
+    test  al, al
+    js    not_io_read
+    sahf
+    mov   ah, al
+    mov   al, IO_READ_OFFSET
+    mov   word ptr ss:[VARIABLE_pending_cycle_count], 3
+    jmp   ax  ; IO handler 
 
 OPCODE_DEFINE 0FBh   ; EI           ; Z- N- H- C-
-    ; TODO interrupt stuff.
+    mov    byte ptr ss:[VARIABLE_IME_flag], 1
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0FCh   ; xxxx         ; Z- N- H- C-
@@ -1691,6 +1751,91 @@ ORG FF_OPCODE_HANDLER_OFFSET
     LOAD_NEXT_INSTRUCTION 4
 
 
+IO_WRITE_DEFINE 00h ; FF00 — P1/JOYP: Joypad TODO
+    
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+
+IO_WRITE_DEFINE 01h ; FF01 — SB: Serial transfer data TODO
+    handle_serial_write:
+    ; print charcter to screen
+    mov    ah, 0Eh
+    mov    al, cl 
+    push   bx
+    mov    bx, 0
+    int    010h    ; INT 10,E - Write Text in Teletype Mode
+    pop    bx
+    
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+IO_WRITE_DEFINE 02h ; FF02 — SC: Serial transfer control  TODO
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+IO_WRITE_DEFINE 03h ; empty
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+IO_WRITE_DEFINE 04h ; FF04 — DIV: Divider register TODO
+    mov   byte ptr ds:[0FF04h], 0 ; . Writing any value to this register resets it to $00. 
+    ; TODO: reset, recalcualte interrupt counts
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+IO_WRITE_DEFINE 05h ; FF05 — TIMA: Timer counter TODO
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+IO_WRITE_DEFINE 06h ; FF06 — TMA: Timer modulo TODO
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+IO_WRITE_DEFINE 07h ; FF07 — TAC: Timer control TODO
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+CURRENT_IO = 08h
+
+REPT 078h
+    IO_WRITE_DEFINE CURRENT_IO
+        LOAD_NEXT_INSTRUCTION_FROM_IO
+        CURRENT_IO = CURRENT_IO + 1
+ENDM
+
+
+
+IO_READ_DEFINE 00h ; FF00 — P1/JOYP: Joypad TODO
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+
+IO_READ_DEFINE 01h ; FF01 — SB: Serial transfer data TODO
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+IO_READ_DEFINE 02h ; FF02 — SC: Serial transfer control  TODO
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+IO_READ_DEFINE 03h ; empty
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+
+IO_READ_DEFINE 04h ; FF04 — DIV: Divider register TODO
+    ; TODO: dynamically calculate the value based on current cycle count.
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+
+IO_READ_DEFINE 05h ; FF05 — TIMA: Timer counter TODO
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+
+IO_READ_DEFINE 06h ; FF06 — TMA: Timer modulo TODO
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+
+IO_READ_DEFINE 07h ; FF07 — TAC: Timer control TODO
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+
+CURRENT_IO = 08h
+
+REPT 078h
+    IO_READ_DEFINE CURRENT_IO
+        LOAD_NEXT_INSTRUCTION_FROM_IO
+        CURRENT_IO = CURRENT_IO + 1
+ENDM
 
 
 

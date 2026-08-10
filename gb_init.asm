@@ -427,6 +427,11 @@ dw 0, 0
 VARIABLE_HOST_ELAPSED_TIME:
 dw 0, 0
 
+VARIABLE_pending_cycle_count:
+dw 0
+VARIABLE_IME_flag:
+db 0
+
 gb_cycles_counted:
 db 0Ah, 0Dh, "Game Boy Cycles: "
 gb_cycles_counted_start:
@@ -440,10 +445,15 @@ host_fps:
 db '000.0$'
 
 
+
+
+
 public VARIABLE_CYCLE_COUNT
 public VARIABLE_pointer_to_core_1
 public VARIABLE_pointer_to_core_2
 public VARIABLE_BAD_OPCODE_handler
+public VARIABLE_pending_cycle_count
+public VARIABLE_IME_flag
 
 rom_filename:
 db "testrom.gb", 0
