@@ -67,28 +67,35 @@ ENDM
 
 DEBUG_CYCLE_COUNTER = 1
 
-IFDEF DEBUG_CYCLE_COUNTER
-  INCREMENT_CYCLES MACRO cycles
-      lahf
-      add  word ptr ss:[VARIABLE_CYCLE_COUNT+0], cycles
-      adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
-      sahf
-  ENDM
-
-ELSE
-
-  INCREMENT_CYCLES MACRO cycles
-
-  ENDM
-ENDIF
-
 
 
 LOAD_NEXT_INSTRUCTION MACRO cycles
-    INCREMENT_CYCLES cycles
+  LOCAL overflow_handler_default
+  IFDEF DEBUG_CYCLE_COUNTER
+    lahf
+    add  word ptr ss:[VARIABLE_CYCLE_COUNT+0], cycles
+    adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
+    sub  ch, (cycles shl 1)
+    jc   overflow_handler_default
+    sahf
     lodsb
     mov  ah, al
     jmp  ax
+    overflow_handler_default:
+    sahf
+    jmp   interrupt_handler
+  ELSEIF
+    lahf
+    sub  ch, (cycles shl 1)
+    jc   overflow_handler_default
+    sahf
+    lodsb
+    mov  ah, al
+    jmp  ax
+    overflow_handler_default:
+    sahf
+    jmp   interrupt_handler
+  ENDIF
 ENDM
 
 IO_MACRO_STORE_CYCLE_COUNT MACRO cycles

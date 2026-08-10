@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/08/10 11:33:46
+Created on:       26/08/10 12:14:18
 Executable Image: realgb.exe
 creating a DOS executable
 
@@ -58,7 +58,7 @@ Module: gb_init.obj(gb_init.ASM)
 2000:0000      INIT_EMULATOR
 2000:0226      VARIABLE_PENDING_CYCLE_COUNT
 Module: gb_core1.obj(gb_core1.ASM)
-0000:000e      CORE1_START
+0000:0130      CORE1_START
 Module: gb_core2.obj(gb_core2.ASM)
 1000:000b      CORE2_START
 
@@ -70,4 +70,4 @@ Module: gb_core2.obj(gb_core2.ASM)
 Stack size:  0400 (1024.)
 Memory size:  00020400 (132096.)
 Entry point address: 2000:0000
-Link time: 00:00.55
+Link time: 00:00.00

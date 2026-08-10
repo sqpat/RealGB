@@ -46,10 +46,7 @@ ASSUME CS:CORE1
 
 
 OPCODE_DEFINE 000h   ; NOP          ; Z- N- H- C-
-    INCREMENT_CYCLES 1
-    CORE1_START:
-    public CORE1_START
-    LOAD_NEXT_INSTRUCTION_NOCYCLES
+    LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 001h   ; LD BC, d16   ; Z- N- H- C-
     lodsw
@@ -772,7 +769,8 @@ OPCODE_DEFINE 075h   ; LD (HL), L   ; Z- N- H- C-
 OPCODE_DEFINE 076h   ; HALT         ; Z- N- H- C-
     ; TODO
     ; burn cycles until interrupt?
-    jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
+        
+
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 077h   ; LD (HL), A   ; Z- N- H- C-
@@ -1761,6 +1759,11 @@ interrupt_handler:
     sahf
     LOAD_NEXT_INSTRUCTION_NOCYCLES
 
+
+ORG 0130h
+    CORE1_START:
+    public CORE1_START
+    LOAD_NEXT_INSTRUCTION_NOCYCLES
 
 
 
