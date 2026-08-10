@@ -766,12 +766,30 @@ OPCODE_DEFINE 075h   ; LD (HL), L   ; Z- N- H- C-
     mov   byte ptr ds:[bx],  bl
     LOAD_NEXT_INSTRUCTION 2
 
-OPCODE_DEFINE 076h   ; HALT         ; Z- N- H- C-
-    ; TODO
-    ; burn cycles until interrupt?
-        
 
-    LOAD_NEXT_INSTRUCTION 1
+IFDEF DEBUG_CYCLE_COUNTER
+    OPCODE_DEFINE 076h   ; HALT         ; Z- N- H- C-
+        ; burn cycles until interrupt?
+        pushf
+        mov   al, ch
+        shr   al, 1
+        cbw
+        add   word ptr ss:[VARIABLE_CYCLE_COUNT+0], ax
+        adc   word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
+        or    ch, (NOT N_FLAG_BIT_CH)   ; skip full count.
+        popf
+        jmp   interrupt_handler
+ELSE
+
+    OPCODE_DEFINE 076h   ; HALT         ; Z- N- H- C-
+        ; burn cycles until interrupt?
+        ; todo should this introduce some emulation delay?  
+        lahf
+        or    ch, (NOT N_FLAG_BIT_CH)   ; skip full count.
+        sahf        
+        jmp   interrupt_handler
+ENDIF
+
 
 OPCODE_DEFINE 077h   ; LD (HL), A   ; Z- N- H- C-
     mov   byte ptr ds:[bx], cl
