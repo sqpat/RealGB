@@ -17,6 +17,12 @@ CORE2 SEGMENT
 ENDS
 
 
+; improvement todos:
+; ch flag set/unset is pretty nasty now with sahf/lahf
+; DAA using x86 decimal adjust instructions is slow and bad
+; pop af, push af arent great... can they get faster.
+
+
 COMMENT @
 AX  = scratch
 BX  = HL
@@ -295,7 +301,7 @@ OPCODE_DEFINE 026h   ; LD H, d8     ; Z- N- H- C-
 
 OPCODE_DEFINE 027h   ; DAA          ; Z+ N- H0 C[7]
 COMMENT @
-    test ch, N_FLAG_BIT 
+    test ch, N_FLAG_BIT_CH 
     jz   cleared_N
     set_N:
       LAHF
@@ -322,7 +328,7 @@ COMMENT @
     mov   al, 0
     xchg  ax, cx     ; ch = flags, ah = N. cl is value to add.
     jnz   daa_c_flag_on
-    test  ah, N_FLAG_BIT
+    test  ah, N_FLAG_BIT_CH
     jnz   skip_daa_high_digit_adjust ; skip if sub flag on
     cmp   al, 099h
     jbe   skip_daa_high_digit_adjust
@@ -335,7 +341,7 @@ COMMENT @
     test  ch, 10h    ; test AF
     mov   ch, al ; backup old digit
     jnz   daa_af_flag_on
-    test  ah, N_FLAG_BIT
+    test  ah, N_FLAG_BIT_CH
     jnz   sub_difference ; skip if sub flag on
     and   al, 0Fh
     cmp   al, 9
@@ -347,7 +353,7 @@ COMMENT @
     ; add back value.
 
     ; set carry flag if cl
-    test  ah, N_FLAG_BIT
+    test  ah, N_FLAG_BIT_CH
     jz    add_difference
     sub_difference:
     neg   cl
@@ -1591,8 +1597,11 @@ OPCODE_DEFINE 0F1h   ; POP AF       ; Z? N? H? C?
       add    di, 2   ; pop off stack.
       mov    cl, ah   ; set accumulator
       mov    ah, al   ; copy flags
-      mov    ch, N_FLAG_BIT  
-      and    ch, al ; N set.
+      and    ch, (NOT N_FLAG_BIT_CH)  ; turn N flag off.
+      test   al, N_FLAG_BIT_GAME_BOY
+      jz     skip_n_flag_on_F1
+      or     ch, N_FLAG_BIT_CH
+      skip_n_flag_on_F1:
       and    ax, 0A010h
       add    ax, (512 - 16) ; bit 9 set only if bit 4 was set
       shr    ah, 1    ; ah has ZF/AF/CF flags in place
@@ -1654,17 +1663,20 @@ OPCODE_DEFINE 0F5h   ; PUSH AF      ; Z- N- H- C-
     ; 0  0     cf (c)
 
     lahf
-    mov  al, ah
-    jnc  skip_carry_flag
-    or   al, 08h  ; turn on carry flag  (was: reserved 0)
+    mov   al, ah
+    jnc   skip_carry_flag
+    or    al, 08h  ; turn on carry flag  (was: reserved 0)
     skip_carry_flag:
-      rol  al, 1    ; line up z and h and c
-      and  al, 0B0h ; turn off bits 0-3 and 6
-      or   al, ch   ; stores 0x40 or 0?
+      rol   al, 1    ; line up z and h and c
+      and   al, 0B0h ; turn off bits 0-3 and 6
+      test  ch, N_FLAG_BIT_CH
+      jz    skip_carry_flag_0F5
+      or    al, N_FLAG_BIT_GAME_BOY
+      skip_carry_flag_0F5:
       sahf          ; restore flags
-      mov  ah, cl
+      mov   ah, cl
       lea   di, [di - 2] ; push to stack.
-      mov  word ptr ds:[di], ax
+      mov   word ptr ds:[di], ax
       LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0F6h   ; OR d8        ; Z+ N0 H0 C0

@@ -41,7 +41,6 @@ POPA_MACRO MACRO
 ENDM
 
 
-N_FLAG_BIT = 040h
 
 DEBUG_CYCLE_COUNTER = 1
 
@@ -125,12 +124,22 @@ ROL4_MACRO MACRO reg
   ENDIF
 ENDM
 
+; store in ch bit 1, though its used as as bit 6 (0x40) in emulator
+N_FLAG_BIT_CH = 001h
+N_FLAG_BIT_GAME_BOY = 040h
+
 SET_N_FLAG_ON MACRO
-   mov ch, N_FLAG_BIT
+  lahf
+   or ch, N_FLAG_BIT_CH
+  sahf
+;   mov ch, N_FLAG_BIT_CH
 ENDM
 
 SET_N_FLAG_OFF MACRO
-   mov ch, 0
+  lahf
+   and ch, (NOT N_FLAG_BIT_CH)
+  sahf
+;   mov ch, 0
 ENDM
 
 
