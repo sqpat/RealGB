@@ -108,7 +108,7 @@ LOAD_NEXT_INSTRUCTION_FROM_IO MACRO
     adc   word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
     shl   al, 1
     sub   ch, al
-    jo    overflow_handler_io
+    jc    overflow_handler_io
     popf
     lodsb
     mov  ah, al
@@ -119,7 +119,7 @@ LOAD_NEXT_INSTRUCTION_FROM_IO MACRO
   ELSE
     lahf
     sub   ch, byte ptr ss:[VARIABLE_pending_cycle_count]  ; pre doubled
-    jo    overflow_handler_io
+    jc    overflow_handler_io
     sahf
     lodsb
     mov  ah, al
@@ -138,7 +138,7 @@ LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
     add  word ptr ss:[VARIABLE_CYCLE_COUNT+0], cycles
     adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
     sub   ch, (cycles shl 1)
-    jo    overflow_handler_seg2
+    jc    overflow_handler_seg2
     sahf
     pop  ax
     PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
@@ -152,7 +152,7 @@ LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
   ELSE
     lahf
     sub   ch, (cycles shl 1)
-    jo    overflow_handler_seg2
+    jc    overflow_handler_seg2
     sahf
     pop  ax
     PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
@@ -184,7 +184,7 @@ LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF MACRO cycles
     add  word ptr ss:[VARIABLE_CYCLE_COUNT+0], cycles
     adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
     sub   ch, (cycles shl 1)     ; 
-    jo    overflow_handler_off
+    jc    overflow_handler_off
     and   ch, (NOT N_FLAG_BIT_CH)
     sahf
     lodsb
@@ -197,7 +197,7 @@ LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF MACRO cycles
   ELSE
     lahf
     sub   ch, (cycles shl 1)     ; 
-    jo    overflow_handler_off
+    jc    overflow_handler_off
     and   ch, (NOT N_FLAG_BIT_CH)
     sahf
     lodsb
@@ -217,7 +217,7 @@ LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON MACRO cycles
     add  word ptr ss:[VARIABLE_CYCLE_COUNT+0], cycles
     adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
     sub   ch, (cycles shl 1)     ; 
-    jo    overflow_handler_on
+    jc    overflow_handler_on
     or    ch, N_FLAG_BIT_CH
     sahf
     lodsb
@@ -230,7 +230,7 @@ LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON MACRO cycles
   ELSE
     lahf
     sub   ch, (cycles shl 1)     ; 
-    jo    overflow_handler_on
+    jc    overflow_handler_on
     or    ch, N_FLAG_BIT_CH
     sahf
     lodsb
