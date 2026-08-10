@@ -9,6 +9,8 @@ COMPISA = COMPILE_8086
 
 FF_OPCODE_HANDLER_OFFSET = 0FEC0h
 
+EMULATOR_MEMORY_SEGMENT = 08000h
+
 PUSHA_MACRO MACRO
 
   IF COMPISA GE COMPILE_186
@@ -73,10 +75,8 @@ LOAD_NEXT_INSTRUCTION MACRO cycles
   LOCAL overflow_handler_default
   IFDEF DEBUG_CYCLE_COUNTER
     lahf
-    add  word ptr ss:[VARIABLE_CYCLE_COUNT+0], cycles
-    adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
     sub  ch, (cycles shl 1)
-    jc   overflow_handler_default
+    jbe  overflow_handler_default
     sahf
     lodsb
     mov  ah, al
@@ -87,7 +87,7 @@ LOAD_NEXT_INSTRUCTION MACRO cycles
   ELSEIF
     lahf
     sub  ch, (cycles shl 1)
-    jc   overflow_handler_default
+    jbe  overflow_handler_default
     sahf
     lodsb
     mov  ah, al
@@ -111,11 +111,9 @@ LOAD_NEXT_INSTRUCTION_FROM_IO MACRO
   IFDEF DEBUG_CYCLE_COUNTER
     pushf
     mov   ax, word ptr ss:[VARIABLE_pending_cycle_count]
-    add   word ptr ss:[VARIABLE_CYCLE_COUNT+0], ax
-    adc   word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
     shl   al, 1
     sub   ch, al
-    jc    overflow_handler_io
+    jbe   overflow_handler_io
     popf
     lodsb
     mov  ah, al
@@ -126,7 +124,7 @@ LOAD_NEXT_INSTRUCTION_FROM_IO MACRO
   ELSE
     lahf
     sub   ch, byte ptr ss:[VARIABLE_pending_cycle_count]  ; pre doubled
-    jc    overflow_handler_io
+    jbe   overflow_handler_io
     sahf
     lodsb
     mov  ah, al
@@ -142,10 +140,8 @@ LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
   LOCAL overflow_handler_seg2
   IFDEF DEBUG_CYCLE_COUNTER
     lahf
-    add  word ptr ss:[VARIABLE_CYCLE_COUNT+0], cycles
-    adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
     sub   ch, (cycles shl 1)
-    jc    overflow_handler_seg2
+    jbe   overflow_handler_seg2
     sahf
     pop  ax
     PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
@@ -159,7 +155,7 @@ LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
   ELSE
     lahf
     sub   ch, (cycles shl 1)
-    jc    overflow_handler_seg2
+    jbe   overflow_handler_seg2
     sahf
     pop  ax
     PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
@@ -188,10 +184,8 @@ LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF MACRO cycles
   LOCAL overflow_handler_off
   IFDEF DEBUG_CYCLE_COUNTER
     lahf
-    add  word ptr ss:[VARIABLE_CYCLE_COUNT+0], cycles
-    adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
     sub   ch, (cycles shl 1)     ; 
-    jc    overflow_handler_off
+    jbe   overflow_handler_off
     and   ch, (NOT N_FLAG_BIT_CH)
     sahf
     lodsb
@@ -204,7 +198,7 @@ LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF MACRO cycles
   ELSE
     lahf
     sub   ch, (cycles shl 1)     ; 
-    jc    overflow_handler_off
+    jbe   overflow_handler_off
     and   ch, (NOT N_FLAG_BIT_CH)
     sahf
     lodsb
@@ -221,10 +215,8 @@ LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON MACRO cycles
   LOCAL overflow_handler_on
   IFDEF DEBUG_CYCLE_COUNTER
     lahf
-    add  word ptr ss:[VARIABLE_CYCLE_COUNT+0], cycles
-    adc  word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
     sub   ch, (cycles shl 1)     ; 
-    jc    overflow_handler_on
+    jbe   overflow_handler_on
     or    ch, N_FLAG_BIT_CH
     sahf
     lodsb
@@ -237,7 +229,7 @@ LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON MACRO cycles
   ELSE
     lahf
     sub   ch, (cycles shl 1)     ; 
-    jc    overflow_handler_on
+    jbe   overflow_handler_on
     or    ch, N_FLAG_BIT_CH
     sahf
     lodsb

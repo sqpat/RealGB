@@ -8,6 +8,14 @@ EXTRN VARIABLE_pointer_to_core_2
 EXTRN VARIABLE_CYCLE_COUNT
 EXTRN VARIABLE_pending_cycle_count
 EXTRN VARIABLE_IME_flag
+EXTRN VARIABLE_cycles_since_last_handler
+EXTRN VARIABLE_cycles_until_next_int_vblank
+EXTRN VARIABLE_cycles_until_next_int_stat
+EXTRN VARIABLE_cycles_until_next_int_timer
+EXTRN VARIABLE_cycles_until_next_int_serial
+EXTRN VARIABLE_cycles_until_next_int_joypad
+EXTRN VARIABLE_pending_interrupt_flags
+
 
 INIT SEGMENT
     ASSUME CS:INIT
@@ -47,6 +55,10 @@ ASSUME CS:CORE1
 
 OPCODE_DEFINE 000h   ; NOP          ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 1
+    END_OF_OPCODE_00:
+    PUBLIC END_OF_OPCODE_00
+
+    ; interrupt handler in 010h
 
 OPCODE_DEFINE 001h   ; LD BC, d16   ; Z- N- H- C-
     lodsw
@@ -774,8 +786,6 @@ IFDEF DEBUG_CYCLE_COUNTER
         mov   al, ch
         shr   al, 1
         cbw
-        add   word ptr ss:[VARIABLE_CYCLE_COUNT+0], ax
-        adc   word ptr ss:[VARIABLE_CYCLE_COUNT+2], 0
         or    ch, (NOT N_FLAG_BIT_CH)   ; skip full count.
         popf
         jmp   interrupt_handler
@@ -1311,7 +1321,7 @@ OPCODE_DEFINE 0D8h   ; RET C         ; Z- N- H- C-
       LOAD_NEXT_INSTRUCTION 5
 
 OPCODE_DEFINE 0D9h   ; RETI         ; Z- N- H- C-
-    ; TODO interrupt stuff
+    mov    byte ptr ss:[VARIABLE_IME_flag], 1
     mov    si, word ptr ds:[di]
     lea    di, [di + 2] ; pop off stack.
     LOAD_NEXT_INSTRUCTION 4
@@ -1681,10 +1691,10 @@ ORG FF_OPCODE_HANDLER_OFFSET
     LOAD_NEXT_INSTRUCTION 4
 
 
-IO_WRITE_DEFINE 00h ; FF00 — P1/JOYP: Joypad TODO
-    
+IO_WRITE_DEFINE 00h ; FF00 — P1/JOYP: Joypad TODO    
+    START_OF_IO_WRITE_00:
+    public START_OF_IO_WRITE_00
     LOAD_NEXT_INSTRUCTION_FROM_IO
-
 
 IO_WRITE_DEFINE 01h ; FF01 — SB: Serial transfer data TODO
     handle_serial_write:
@@ -1729,7 +1739,11 @@ ENDM
 
 
 IO_READ_DEFINE 00h ; FF00 — P1/JOYP: Joypad TODO
-    LOAD_NEXT_INSTRUCTION_FROM_IO
+    START_OF_IO_READ_00:
+    public START_OF_IO_READ_00
+    jmp   do_joypad_read_io_handler
+    END_OF_IO_READ_00:
+    public END_OF_IO_READ_00
 
 
 IO_READ_DEFINE 01h ; FF01 — SB: Serial transfer data TODO
@@ -1769,13 +1783,241 @@ ENDM
 
 
 
-ORG 0030h
+ORG 0010h
 interrupt_handler:
-    ; TODO
-    lahf
-    or   ch, 0FEh  ; more cycles till next interrupt
-    sahf
+public interrupt_handler
+    ; TODO this is colliding with other things in the memory space - named I/O read/write handler 0
+    pushf
+    ; 1 decrement cycle counters since last interrupt_handler
+
+    push  ss
+    pop   ds
+    mov   ax, word ptr ds:[VARIABLE_cycles_since_last_handler]
+    mov   ah, ch
+    sar   ah, 1
+    neg   ah
+    add   al, ah
+    mov   ah, 0
+
+    IFDEF DEBUG_CYCLE_COUNTER
+        add   word ptr ds:[VARIABLE_CYCLE_COUNT+0], ax
+        adc   word ptr ds:[VARIABLE_CYCLE_COUNT+2], 0
+    ENDIF
+
+    push  cx
+    xor   cx, cx
+
+; store flags backwards.
+    sub   word ptr ds:[VARIABLE_cycles_until_next_int_joypad], ax
+    adc   cl, ch
+    shl   cl, 1
+    sub   word ptr ds:[VARIABLE_cycles_until_next_int_serial], ax
+    adc   cl, ch
+    shl   cl, 1
+    sub   word ptr ds:[VARIABLE_cycles_until_next_int_timer], ax
+    adc   cl, ch
+    shl   cl, 1
+    sub   word ptr ds:[VARIABLE_cycles_until_next_int_stat], ax
+    adc   cl, ch
+    shl   cl, 1
+    sub   word ptr ds:[VARIABLE_cycles_until_next_int_vblank], ax
+    adc   cl, ch
+
+; note: this is equal to 0FF0Fh: IF/Interrupt flag
+
+   ; cl low 5 bits are flags for which interrupts need to run.
+
+; 2. figure out which interrupts if any to run, run the interrupts
+    jz    done_running_interrupts
+  check_to_run_interrupts:  ; 56
+  public check_to_run_interrupts
+    shr   cl, 1
+    jc    handle_interrupt_vblank
+  continue_handling_interrupt_after_vblank:
+    shr   cl, 1
+    jc    handle_interrupt_stat
+  continue_handling_interrupt_after_stat:
+    shr   cl, 1
+    jc    handle_interrupt_timer
+  continue_handling_interrupt_after_timer:
+    shr   cl, 1
+    jc    handle_interrupt_serial
+  continue_handling_interrupt_after_serial:
+    shr   cl, 1
+    jc    handle_interrupt_joypad
+  continue_handling_interrupt_after_joypad:
+  done_running_interrupts:
+  public done_running_interrupts  ; 6A
+    pop   cx
+
+
+; 3. figure out new ch value: min(127, min(interrupt clocks)) << 1
+    ; todo: cmpsw?
+    mov   ax, word ptr ds:[VARIABLE_cycles_until_next_int_stat]
+    cmp   ax, 127
+    jbe   use_stat_cycle_value
+    mov   ax, 127
+  use_stat_cycle_value: ; 0x78
+    cmp   ax, word ptr ds:[VARIABLE_cycles_until_next_int_vblank]
+    ja    set_to_vblank_cycles
+  continue_cycle_checks_after_vblank:
+    cmp   ax, word ptr ds:[VARIABLE_cycles_until_next_int_timer]
+    ja    set_to_timer_cycles
+  continue_cycle_checks_after_timer:
+    cmp   ax, word ptr ds:[VARIABLE_cycles_until_next_int_serial]
+    ja    set_to_serial_cycles
+  continue_cycle_checks_after_serial:
+    cmp   ax, word ptr ds:[VARIABLE_cycles_until_next_int_joypad]
+    ja    set_to_joypad_cycles
+  continue_cycle_checks_after_joypad:
+
+
+    mov   byte ptr ds:[VARIABLE_cycles_since_last_handler], al   ;  save cycles to next handler
+    shr   ch, 1    ; store bit 0 in CF
+    mov   ch, al   
+    rcl   ch, 1
+
+    ; 5. restore flags and load next instruction
+
+    mov    ax, EMULATOR_MEMORY_SEGMENT
+    mov    ds, ax
+    popf
+
     LOAD_NEXT_INSTRUCTION_NOCYCLES
+    END_OF_INTERRUPT_HANDLER:
+    public END_OF_INTERRUPT_HANDLER ; a0
+    ; 08a
+    ; (a0 has stuff)
+
+
+  ORG 000A4h
+
+  handle_interrupt_vblank:
+  public handle_interrupt_vblank
+    jmp   do_interrupt_vblank
+  handle_interrupt_stat:
+    jmp   do_stat_interrupt
+  handle_interrupt_timer:
+    jmp   do_timer_interrupt
+  handle_interrupt_serial:
+    jmp   do_serial_interrupt
+  handle_interrupt_joypad:
+    jmp   do_joypad_interrupt
+
+  
+  set_to_vblank_cycles:
+    mov   ax, word ptr ds:[VARIABLE_cycles_until_next_int_vblank]
+    jmp   continue_cycle_checks_after_vblank
+  set_to_timer_cycles:
+    mov   ax, word ptr ds:[VARIABLE_cycles_until_next_int_timer]
+    jmp   continue_cycle_checks_after_timer
+  set_to_serial_cycles:
+    mov   ax, word ptr ds:[VARIABLE_cycles_until_next_int_serial]
+    jmp   continue_cycle_checks_after_serial
+  set_to_joypad_cycles:
+    mov   ax, word ptr ds:[VARIABLE_cycles_until_next_int_joypad]
+    jmp   continue_cycle_checks_after_joypad
+  END_OF_INTERRUPT_EXTRACODE:
+  public END_OF_INTERRUPT_EXTRACODE ; 0c7h
+
+
+ORG 00240h
+  do_interrupt_vblank:
+    mov    word ptr ds:[VARIABLE_pending_interrupt_flags], cx
+    pop    cx
+    ; add, not mov... might be negative due to overshoot.
+    ; mind the flags...
+    add    word ptr ds:[VARIABLE_cycles_until_next_int_vblank], 17560
+    popf
+    push   ax
+    mov    ax, EMULATOR_MEMORY_SEGMENT
+    mov    ds, ax
+    mov    ax, ss
+    ; todo: do stuff
+    mov    ds, ax
+    pop    ax
+    pushf
+    push   cx
+    mov    cx, word ptr ds:[VARIABLE_pending_interrupt_flags]
+    jmp    continue_handling_interrupt_after_vblank
+
+ORG 00340h
+  do_stat_interrupt:
+    mov    word ptr ds:[VARIABLE_pending_interrupt_flags], cx
+    pop    cx
+    popf
+    push   ax
+    mov    word ptr ds:[VARIABLE_cycles_until_next_int_stat], 0FFFFh  ; todo
+    mov    ax, EMULATOR_MEMORY_SEGMENT
+    mov    ds, ax
+    mov    ax, ss
+    ; todo: do stuff
+    mov    ds, ax
+    pop    ax
+    pushf
+    push   cx
+    mov    cx, word ptr ds:[VARIABLE_pending_interrupt_flags]
+    jmp    continue_handling_interrupt_after_stat
+
+ORG 00440h
+  do_timer_interrupt:
+    mov    word ptr ds:[VARIABLE_pending_interrupt_flags], cx
+    pop    cx
+    popf
+    push   ax
+    mov    word ptr ds:[VARIABLE_cycles_until_next_int_timer], 0FFFFh  ; todo
+    mov    ax, EMULATOR_MEMORY_SEGMENT
+    mov    ds, ax
+    mov    ax, ss
+    ; todo: do stuff
+    ;inc    byte ptr ds:[0FF06]  ; TIMER MODULO
+    mov    ds, ax
+    pop    ax
+    pushf
+    push   cx
+    mov    cx, word ptr ds:[VARIABLE_pending_interrupt_flags]
+    jmp    continue_handling_interrupt_after_timer
+
+ORG 00540h
+  do_serial_interrupt:
+    mov    word ptr ds:[VARIABLE_pending_interrupt_flags], cx
+    pop    cx
+    popf
+    push   ax
+    mov    word ptr ds:[VARIABLE_cycles_until_next_int_serial], 0FFFFh  ; todo
+    mov    ax, EMULATOR_MEMORY_SEGMENT
+    mov    ds, ax
+    ; todo: do stuff
+    mov    ax, ss
+    mov    ds, ax
+    pop    ax
+    pushf
+    push   cx
+    mov    cx, word ptr ds:[VARIABLE_pending_interrupt_flags]
+    jmp    continue_handling_interrupt_after_serial
+
+ORG 00640h
+  do_joypad_interrupt:
+    mov    word ptr ds:[VARIABLE_pending_interrupt_flags], cx
+    pop    cx
+    popf
+    push   ax
+    mov    word ptr ds:[VARIABLE_cycles_until_next_int_joypad], 0FFFFh  ; todo
+    mov    ax, EMULATOR_MEMORY_SEGMENT
+    mov    ds, ax
+    ; todo: do stuff
+    mov    ax, ss
+    mov    ds, ax
+    pop    ax
+    pushf
+    push   cx
+    mov    cx, word ptr ds:[VARIABLE_pending_interrupt_flags]
+    jmp    continue_handling_interrupt_after_joypad
+
+
+ORG 00740h
+  do_joypad_read_io_handler:
+    LOAD_NEXT_INSTRUCTION_FROM_IO
 
 
 ORG 0130h

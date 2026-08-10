@@ -110,7 +110,7 @@ mov   word ptr cs:[VARIABLE_rom_file_handle], ax
 ; INT 21,3F - Read From File or Device Using Handle
 
 xchg  ax, bx
-mov   ax, 08000h
+mov   ax, EMULATOR_MEMORY_SEGMENT
 mov   ds, ax   ; emulator lives in 0x8000
 mov   es, ax   ; emulator lives in 0x8000
 mov   cx, 32768
@@ -161,6 +161,7 @@ mov  di, 0FFFEh  ; initial SP
 mov  bp, 00013h  ; initial BC
 mov  dx, 000D8h  ; initial DE
 mov  bx, 0014Dh  ; initial HL
+mov  cx, 00200h  ; initial cx, N flag
 xor  ax, ax
 test ax, ax
 
@@ -432,6 +433,24 @@ dw 0
 VARIABLE_IME_flag:
 db 0
 
+ALIGN 2
+
+VARIABLE_cycles_since_last_handler:
+dw 1  ; default value
+
+VARIABLE_cycles_until_next_int_vblank:
+dw 17560
+VARIABLE_cycles_until_next_int_stat:
+dw 0FFFFh
+VARIABLE_cycles_until_next_int_timer:
+dw 0FFFFh
+VARIABLE_cycles_until_next_int_serial:
+dw 0FFFFh
+VARIABLE_cycles_until_next_int_joypad:
+dw 0FFFFh
+VARIABLE_pending_interrupt_flags:
+dw 0
+
 gb_cycles_counted:
 db 0Ah, 0Dh, "Game Boy Cycles: "
 gb_cycles_counted_start:
@@ -447,7 +466,14 @@ db '000.0$'
 
 
 
+public VARIABLE_cycles_until_next_int_vblank
+public VARIABLE_cycles_until_next_int_stat
+public VARIABLE_cycles_until_next_int_timer
+public VARIABLE_cycles_until_next_int_serial
+public VARIABLE_cycles_until_next_int_joypad
+public VARIABLE_pending_interrupt_flags
 
+public VARIABLE_cycles_since_last_handler
 public VARIABLE_CYCLE_COUNT
 public VARIABLE_pointer_to_core_1
 public VARIABLE_pointer_to_core_2

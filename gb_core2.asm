@@ -7,7 +7,13 @@ INCLUDE gb_defs.inc
 EXTRN CORE1_START
 EXTRN VARIABLE_pointer_to_core_1
 EXTRN VARIABLE_CYCLE_COUNT
-
+EXTRN VARIABLE_cycles_since_last_handler
+EXTRN VARIABLE_cycles_until_next_int_vblank
+EXTRN VARIABLE_cycles_until_next_int_stat
+EXTRN VARIABLE_cycles_until_next_int_timer
+EXTRN VARIABLE_cycles_until_next_int_serial
+EXTRN VARIABLE_cycles_until_next_int_joypad
+EXTRN interrupt_handler
 
 CORE1 SEGMENT
     ASSUME CS:CORE1
@@ -1925,15 +1931,9 @@ ORG FF_OPCODE_HANDLER_OFFSET
 
 ORG 0030h
 interrupt_handler_seg2:
-    ; TODO
-    lahf
-    or   ch, 0FEh  ; more cycles till next interrupt
-    sahf
     pop  ax
     PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
-    lodsb
-    mov  ah, al
-    mov  word ptr ss:[VARIABLE_pointer_to_core_1], ax
+    mov  word ptr ss:[VARIABLE_pointer_to_core_1], OFFSET interrupt_handler
     jmp  dword ptr ss:[VARIABLE_pointer_to_core_1]
 
 

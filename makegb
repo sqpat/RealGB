@@ -10,7 +10,7 @@ realgb.exe : $(GLOBOBJS)
  wstrip realgb.exe
 
 .asm.obj :
- tasm /m6 $[*
+ tasm /m6 /w0 /zd $[*
 
 clean : .SYMBOLIC
  del *.obj
