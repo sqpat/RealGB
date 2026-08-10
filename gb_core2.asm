@@ -1923,6 +1923,22 @@ ORG FF_OPCODE_HANDLER_OFFSET
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 
+ORG 0030h
+interrupt_handler_seg2:
+    ; TODO
+    lahf
+    or   ch, 0FEh  ; more cycles till next interrupt
+    sahf
+    pop  ax
+    PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
+    lodsb
+    mov  ah, al
+    mov  word ptr ss:[VARIABLE_pointer_to_core_1], ax
+    jmp  dword ptr ss:[VARIABLE_pointer_to_core_1]
+
+
+
+
 ENDS  ; CORE2
 
 

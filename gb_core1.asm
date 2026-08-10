@@ -68,15 +68,13 @@ OPCODE_DEFINE 004h   ; INC B        ; Z+ N0 H[3] C-
     xchg ax, bp
     inc  ah
     xchg ax, bp
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 005h   ; DEC B        ; Z+ N0 H[3] C-
     xchg ax, bp
     dec  ah
     xchg ax, bp
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 006h   ; LD B, d8     ; Z- N- H- C-
     ; a little gross.
@@ -90,8 +88,7 @@ OPCODE_DEFINE 006h   ; LD B, d8     ; Z- N- H- C-
 OPCODE_DEFINE 007h   ; RLCA         ; Z0 N0 H0 C[7]
     test  ax, ax    ; clear flags, known to be 0707h 
     rol   cl, 1     ; set carry
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 008h   ; LD (a16), SP ; Z- N- H- C-
     lodsw
@@ -112,8 +109,7 @@ OPCODE_DEFINE 009h   ; ADD HL, BC   ; Z- N0 H11 C15
     and  ah, 0BFh ; remove current zero flag
     or   ah, al    ; apply old zero flat
     sahf 
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 00Ah   ; LD A, (BC)   ; Z- N- H- C-
     mov   cl, byte ptr ds:[bp]
@@ -127,15 +123,13 @@ OPCODE_DEFINE 00Ch   ; INC C        ; Z+ N0 H[3] C-
     xchg ax, bp
     inc  al
     xchg ax, bp
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 00Dh   ; DEC C        ; Z+ N0 H[3] C-
     xchg ax, bp
     dec  al
     xchg ax, bp
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 00Eh   ; LD C, d8     ; Z- N- H- C-
     xchg ax, bp
@@ -146,8 +140,7 @@ OPCODE_DEFINE 00Eh   ; LD C, d8     ; Z- N- H- C-
 OPCODE_DEFINE 00Fh   ; RRCA         ; Z0 N0 H0 C[0]
     test  ax, ax    ; clear flags, known to be 0F0Fh 
     ror   cl, 1     ; set carry
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 010h   ; STOP         ; Z- N- H- C-
     ; TODO.
@@ -175,13 +168,11 @@ OPCODE_DEFINE 013h   ; INC DE       ; Z- N- H- C-
 
 OPCODE_DEFINE 014h   ; INC D        ; Z+ N0 H[3] C-
     inc   dh
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 015h   ; DEC D        ; Z+ N0 H[3] C-
     dec   dh
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 016h   ; LD D, d8     ; Z- N- H- C-
     lodsb
@@ -222,8 +213,7 @@ OPCODE_DEFINE 019h   ; ADD HL, DE   ; Z- N0 H11 C15
     and  ah, 0BFh ; remove current zero flag
     or   ah, al    ; apply old zero flat
     sahf 
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 01Ah   ; LD A, (DE)   ; Z- N- H- C-
     xchg bx, dx
@@ -239,13 +229,11 @@ OPCODE_DEFINE 01Bh   ; DEC DE       ; Z- N- H- C-
 
 OPCODE_DEFINE 01Ch   ; INC E        ; Z+ N0 H[3] C-
     inc  dl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 01Dh   ; DEC E        ; Z+ N0 H[3] C-
     dec  dl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 01Eh   ; LD E, d8     ; Z- N- H- C-
     lodsb
@@ -256,8 +244,7 @@ OPCODE_DEFINE 01Fh   ; RRA          ; Z0 N0 H0 C[0]
     rcr   cl, 1     ; thanks zero318
     sbb   al, al    ; 0 if nc, ff if c
     add   al, 010h  ; zf 0, af 0, cf if c
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 020h   ; JR NZ, s8    ; Z- N- H- C-
     lodsb
@@ -286,13 +273,11 @@ OPCODE_DEFINE 023h   ; INC HL       ; Z- N- H- C-
 
 OPCODE_DEFINE 024h   ; INC H        ; Z+ N0 H[3] C-
     inc   bh
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 025h   ; DEC H        ; Z+ N0 H[3] C-
     dec   bh
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 026h   ; LD H, d8     ; Z- N- H- C-
     lodsb
@@ -396,8 +381,7 @@ OPCODE_DEFINE 029h   ; ADD HL, HL   ; Z- N0 H[11] C[15]
     and  ah, 0BFh ; remove current zero flag
     or   ah, al    ; apply old zero flat
     sahf 
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 02Ah   ; LD A, (HL+)  ; Z- N- H- C-
     mov  cl, byte ptr ds:[bx]
@@ -410,13 +394,11 @@ OPCODE_DEFINE 02Bh   ; DEC HL       ; Z- N- H- C-
 
 OPCODE_DEFINE 02Ch   ; INC L        ; Z+ N0 H[3] C-
     inc  bl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 02Dh   ; DEC L        ; Z+ N0 H[3] C-
     dec  bl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
 OPCODE_DEFINE 02Eh   ; LD L, d8     ; Z- N- H- C-
     lodsb
@@ -428,8 +410,7 @@ OPCODE_DEFINE 02Fh   ; CPL          ; Z- N1 H1 C-
     lahf
     or   ah, 010h  ; set ah to 1..
     sahf
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 030h   ; JR NC, s8    ; Z- N- H- C-
     lodsb
@@ -458,13 +439,11 @@ OPCODE_DEFINE 033h   ; INC SP       ; Z- N- H- C-
 
 OPCODE_DEFINE 034h   ; INC (HL)     ; Z+ N0 H[3] C-
     inc  byte ptr ds:[bx]
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 3
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 3
 
 OPCODE_DEFINE 035h   ; DEC (HL)     ; Z+ N0 H[3] C-
     dec  byte ptr ds:[bx]
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 3
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 3
 
 OPCODE_DEFINE 036h   ; LD (HL), d8  ; Z- N- H- C-
     lodsb
@@ -476,8 +455,7 @@ OPCODE_DEFINE 037h   ; SCF          ; Z- N0 H0 C[7]
     and   ah, 0EFh       ; turn off AF
     sahf
     stc                  ; set carry flag
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 038h   ; JR C, s8     ; Z- N- H- C-
     lodsb
@@ -502,8 +480,7 @@ OPCODE_DEFINE 039h   ; ADD HL, SP   ; Z- N0 H11 C15
     and  ah, 0BFh ; remove current zero flag
     or   ah, al    ; apply old zero flat
     sahf 
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 03Ah   ; LD A, (HL-)   ; Z- N- H- C-
     mov  cl, byte ptr ds:[bx]
@@ -516,13 +493,11 @@ OPCODE_DEFINE 03Bh   ; DEC SP       ; Z- N- H- C-
 
 OPCODE_DEFINE 03Ch   ; INC A        ; Z+ N0 H[3] C-
     inc   cl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 03Dh   ; DEC A        ; Z+ N0 H[3] C-
     dec   cl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 03Eh   ; LD A, d8     ; Z- N- H- C-
     lodsb
@@ -534,8 +509,7 @@ OPCODE_DEFINE 03Fh   ; CCF          ; Z- N0 H0 C[7]
     and   ah, 0EFh  ; turn off AF
     sahf
     cmc             ; flip carry flag
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 040h   ; LD B, B      ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 1
@@ -844,177 +818,145 @@ OPCODE_DEFINE 080h   ; ADD A, B     ; Z+ N0 H[3] C[7]
     xchg  ax, bp
     add   cl, ah
     xchg  ax, bp
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 081h   ; ADD A, C     ; Z+ N0 H[3] C[7]
     xchg  ax, bp
     add   cl, al
     xchg  ax, bp
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 082h   ; ADD A, D     ; Z+ N0 H[3] C[7]
     add   cl, dh
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 083h   ; ADD A, E     ; Z+ N0 H[3] C[7]
     add   cl, dl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 084h   ; ADD A, H     ; Z+ N0 H[3] C[7]
     add   cl, bh
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 085h   ; ADD A, L     ; Z+ N0 H[3] C[7]
     add   cl, bl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 086h   ; ADD A, (HL)  ; Z+ N0 H[3] C[7]
     add   cl, byte ptr ds:[bx]
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 087h   ; ADD A, A     ; Z+ N0 H[3] C[7]
     add   cl, cl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 088h   ; ADC A, B     ; Z+ N0 H[3] C[7]
     xchg  ax, bp
     adc   cl, ah
     xchg  ax, bp
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 089h   ; ADC A, C     ; Z+ N0 H[3] C[7]
     xchg  ax, bp
     adc   cl, al
     xchg  ax, bp
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 08Ah   ; ADC A, D     ; Z+ N0 H[3] C[7]
     adc   cl, dh
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 08Bh   ; ADC A, E     ; Z+ N0 H[3] C[7]
     adc   cl, dl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 08Ch   ; ADC A, H     ; Z+ N0 H[3] C[7]
     adc   cl, bh
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 08Dh   ; ADC A, L     ; Z+ N0 H[3] C[7]
     adc   cl, bl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 08Eh   ; ADD AC (HL)  ; Z+ N0 H[3] C[7]
     adc   cl, byte ptr ds:[bx]
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 08Fh   ; ADC A, A     ; Z+ N0 H[3] C[7]
     adc   cl, cl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 090h   ; SUB B        ; Z+ N1 H[3] C[7]
     xchg  ax, bp
     sub   cl, ah
     xchg  ax, bp
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 091h   ; SUB C        ; Z+ N1 H[3] C[7]
     xchg  ax, bp
     sub   cl, al
     xchg  ax, bp
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 092h   ; SUB D        ; Z+ N1 H[3] C[7]
     sub   cl, dh
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 093h   ; SUB E        ; Z+ N1 H[3] C[7]
     sub   cl, dl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 094h   ; SUB H        ; Z+ N1 H[3] C[7]
     sub   cl, bh
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 095h   ; SUB L        ; Z+ N1 H[3] C[7]
     sub   cl, bl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 096h   ; SUB (HL)     ; Z+ N1 H[3] C[7]
     sub   cl, byte ptr ds:[bx]
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
 OPCODE_DEFINE 097h   ; SUB A        ; Z+ N1 H[3] C[7]
     sub   cl, cl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 098h   ; SBC B        ; Z+ N1 H[3] C[7]
     xchg  ax, bp
     sbb   cl, ah
     xchg  ax, bp
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 099h   ; SBC C        ; Z+ N1 H[3] C[7]
     xchg  ax, bp
     sbb   cl, al
     xchg  ax, bp
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 09Ah   ; SBC D        ; Z+ N1 H[3] C[7]
     sbb   cl, dh
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 09Bh   ; SBC E        ; Z+ N1 H[3] C[7]
     sbb   cl, dl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 09Ch   ; SBC H        ; Z+ N1 H[3] C[7]
     sbb   cl, bh
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 09Dh   ; SBC L        ; Z+ N1 H[3] C[7]
     sbb   cl, bl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 09Eh   ; SBC (HL)     ; Z+ N1 H[3] C[7]
     sbb   cl, byte ptr ds:[bx]
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
 OPCODE_DEFINE 09Fh   ; SBC A        ; Z+ N1 H[3] C[7]
     sbb   cl, cl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 0A0h   ; AND B        ; Z+ N0 H1 C0
     xchg  ax, bp
@@ -1023,8 +965,7 @@ OPCODE_DEFINE 0A0h   ; AND B        ; Z+ N0 H1 C0
     lahf
     or    ah, 010h       ; turn on AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0A1h   ; AND C        ; Z+ N0 H1 C0
     xchg  ax, bp
@@ -1033,188 +974,157 @@ OPCODE_DEFINE 0A1h   ; AND C        ; Z+ N0 H1 C0
     lahf
     or    ah, 010h       ; turn on AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0A2h   ; AND D        ; Z+ N0 H1 C0
     and   cl, dh
     lahf
     or    ah, 010h       ; turn on AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0A3h   ; AND E        ; Z+ N0 H1 C0
     and   cl, dl
     lahf
     or    ah, 010h       ; turn on AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0A4h   ; AND H        ; Z+ N0 H1 C0
     and   cl, bh
     lahf
     or    ah, 010h       ; turn on AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0A5h   ; AND L        ; Z+ N0 H1 C0
     and   cl, bl
     lahf
     or    ah, 010h       ; turn on AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0A6h   ; AND (HL)     ; Z+ N0 H1 C0
     and   cl, byte ptr ds:[bx]
     lahf
     or    ah, 010h       ; turn on AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 0A7h   ; AND A        ; Z+ N0 H1 C0
     and   cl, cl
     lahf
     or    ah, 010h       ; turn on AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0A8h   ; XOR B        ; Z+ N0 H0 C0
     xchg  ax, bp
     xor   cl, ah
     xchg  ax, bp
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0A9h   ; XOR C        ; Z+ N0 H0 C0
     xchg  ax, bp
     xor   cl, al
     xchg  ax, bp
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0AAh   ; XOR D        ; Z+ N0 H0 C0
     xor   cl, dh
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0ABh   ; XOR E        ; Z+ N0 H0 C0
     xor   cl, dl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0ACh   ; XOR H        ; Z+ N0 H0 C0
     xor   cl, bh
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0ADh   ; XOR L        ; Z+ N0 H0 C0
     xor   cl, bl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0AEh   ; XOR (HL)     ; Z+ N0 H0 C0
     xor   cl, byte ptr ds:[bx]
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 0AFh   ; XOR A        ; Z+ N0 H0 C0
     xor   cl, cl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0B0h   ; OR B        ; Z+ N0 H0 C0
     xchg  ax, bp
     or    cl, ah
     xchg  ax, bp
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0B1h   ; OR C        ; Z+ N0 H0 C0
     xchg  ax, bp
     or    cl, al
     xchg  ax, bp
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0B2h   ; OR D        ; Z+ N0 H0 C0
     or    cl, dh
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0B3h   ; OR E        ; Z+ N0 H0 C0
     or    cl, dl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0B4h   ; OR H        ; Z+ N0 H0 C0
     or    cl, bh
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0B5h   ; OR L        ; Z+ N0 H0 C0
     or    cl, bl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0B6h   ; OR (HL)     ; Z+ N0 H0 C0
     or    cl, byte ptr ds:[bx]
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 0B7h   ; OR A        ; Z+ N0 H0 C0
     or    cl, cl
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
 OPCODE_DEFINE 0B8h   ; CP B        ; Z+ N1 H[3] C[7]
     xchg  ax, bp
     cmp   cl, ah
     xchg  ax, bp
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 0B9h   ; CP C        ; Z+ N1 H[3] C[7]
     xchg  ax, bp
     cmp   cl, al
     xchg  ax, bp
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 0BAh   ; CP D        ; Z+ N1 H[3] C[7]
     cmp    cl, dh
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 0BBh   ; CP E        ; Z+ N1 H[3] C[7]
     cmp    cl, dl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 0BCh   ; CP H        ; Z+ N1 H[3] C[7]
     cmp    cl, bh
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 0BDh   ; CP L        ; Z+ N1 H[3] C[7]
     cmp    cl, bl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 0BEh   ; CP (HL)     ; Z+ N1 H[3] C[7]
     cmp    cl, byte ptr ds:[bx]
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 0BFh   ; CP A        ; Z+ N1 H[3] C[7]
     cmp    cl, cl
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 0C0h   ; RET NZ       ; Z- N- H- C-
     jnz    do_ret_nz
@@ -1260,8 +1170,7 @@ OPCODE_DEFINE 0C5h   ; PUSH BC      ; Z- N- H- C-
 OPCODE_DEFINE 0C6h   ; ADD A, d8    ; Z+ N0 H[3] C[7]
     lodsb
     add   cl, al
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 0C7h   ; RST 0        ; Z- N- H- C-
     lea   di, [di - 2] ; push to stack.
@@ -1318,8 +1227,7 @@ OPCODE_DEFINE 0CDh   ; CALL a16     ; Z- N- H- C-
 OPCODE_DEFINE 0CEh   ; ADC A, d8    ; Z+ N0 H[3] C[7]
     lodsb
     adc  cl, al
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 0CFh   ; RST 1        ; Z- N- H- C-
     lea    di, [di - 2] ; push to stack.
@@ -1370,8 +1278,7 @@ OPCODE_DEFINE 0D5h   ; PUSH DE      ; Z- N- H- C-
 OPCODE_DEFINE 0D6h   ; SUB d8       ; Z+ N1 H[3] C[7]
     lodsb
     sub    cl, al
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
 OPCODE_DEFINE 0D7h   ; RST 2        ; Z- N- H- C-
     lea    di, [di - 2] ; push to stack.
@@ -1422,8 +1329,7 @@ OPCODE_DEFINE 0DDh   ; xxxx         ; Z- N- H- C-
 OPCODE_DEFINE 0DEh   ; SBC A, d8    ; Z+ N1 H[3] C[7]
     lodsb
     sbb    cl, al
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
 OPCODE_DEFINE 0DFh   ; RST 3        ; Z- N- H- C-
     lea    di, [di - 2] ; push to stack.
@@ -1446,7 +1352,7 @@ OPCODE_DEFINE 0E0h   ; LD (a8), A   ; Z- N- H- C-
     sahf
     mov   ah, al
     mov   al, IO_WRITE_OFFSET
-    mov   word ptr ss:[VARIABLE_pending_cycle_count], 3
+    IO_MACRO_STORE_CYCLE_COUNT 3
     jmp   ax  ; IO handler 
 
 OPCODE_DEFINE 0E1h   ; POP HL       ; Z- N- H- C-
@@ -1469,7 +1375,7 @@ OPCODE_DEFINE 0E2h   ; LD (C), A    ; Z- N- H- C-
     sahf
     mov   ah, al
     mov   al, IO_WRITE_OFFSET
-    mov   word ptr ss:[VARIABLE_pending_cycle_count], 2
+    IO_MACRO_STORE_CYCLE_COUNT 2
     jmp   ax  ; IO handler 
 
 OPCODE_DEFINE 0E3h   ; xxxx         ; Z- N- H- C-
@@ -1491,8 +1397,7 @@ OPCODE_DEFINE 0E6h   ; AND d8        ; Z+ N0 H1 C[7]
     lahf
     or     ah, 010h      ; turn on AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 0E7h   ; RST 4        ; Z- N- H- C-
     lea    di, [di - 2] ; push to stack.
@@ -1537,7 +1442,7 @@ OPCODE_DEFINE 0EAh   ; LD (a16), A  ; Z- N- H- C-
     sahf
     mov   ah, al
     mov   al, IO_WRITE_OFFSET
-    mov   word ptr ss:[VARIABLE_pending_cycle_count], 4
+    IO_MACRO_STORE_CYCLE_COUNT 4
     jmp   ax
 
 OPCODE_DEFINE 0EBh   ; xxxx         ; Z- N- H- C-
@@ -1555,8 +1460,7 @@ OPCODE_DEFINE 0EDh   ; xxxx         ; Z- N- H- C-
 OPCODE_DEFINE 0EEh   ; XOR d8        ; Z+ N0 H0 C0
     lodsb
     xor    cl, al
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 0EFh   ; RST 5        ; Z- N- H- C-
     lea    di, [di - 2] ; push to stack.
@@ -1579,7 +1483,7 @@ OPCODE_DEFINE 0F0h   ; LD A, (a8)   ; Z- N- H- C-
     sahf
     mov   ah, al
     mov   al, IO_READ_OFFSET
-    mov   word ptr ss:[VARIABLE_pending_cycle_count], 3
+    IO_MACRO_STORE_CYCLE_COUNT 3
     jmp   ax  ; IO handler 
 
 OPCODE_DEFINE 0F1h   ; POP AF       ; Z? N? H? C?
@@ -1639,7 +1543,7 @@ OPCODE_DEFINE 0F2h   ; LD A, (C)    ; Z- N- H- C-
     sahf
     mov   ah, al
     mov   al, IO_READ_OFFSET
-    mov   word ptr ss:[VARIABLE_pending_cycle_count], 2
+    IO_MACRO_STORE_CYCLE_COUNT 2
     jmp   ax  ; IO handler 
 
 
@@ -1682,8 +1586,7 @@ OPCODE_DEFINE 0F5h   ; PUSH AF      ; Z- N- H- C-
 OPCODE_DEFINE 0F6h   ; OR d8        ; Z+ N0 H0 C0
     lodsb
     or     cl, al
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 0F7h   ; RST 6        ; Z- N- H- C-
     lea    di, [di - 2] ; push to stack.
@@ -1730,7 +1633,7 @@ OPCODE_DEFINE 0FAh   ; LD A, (a16)  ; Z- N- H- C-
     sahf
     mov   ah, al
     mov   al, IO_READ_OFFSET
-    mov   word ptr ss:[VARIABLE_pending_cycle_count], 3
+    IO_MACRO_STORE_CYCLE_COUNT 3
     jmp   ax  ; IO handler 
 
 OPCODE_DEFINE 0FBh   ; EI           ; Z- N- H- C-
@@ -1748,8 +1651,7 @@ OPCODE_DEFINE 0FDh   ; xxxx         ; Z- N- H- C-
 OPCODE_DEFINE 0FEh   ; CP d8        ; Z+ N1 H[3] C[7]
     lodsb
     cmp    cl, al
-    SET_N_FLAG_ON
-    LOAD_NEXT_INSTRUCTION 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
 OPCODE_DEFINE 0FFh   ; RST 7        ; Z- N- H- C-
     ret  ; jump to 
@@ -1848,6 +1750,16 @@ REPT 078h
         LOAD_NEXT_INSTRUCTION_FROM_IO
         CURRENT_IO = CURRENT_IO + 1
 ENDM
+
+
+
+ORG 0030h
+interrupt_handler:
+    ; TODO
+    lahf
+    or   ch, 0FEh  ; more cycles till next interrupt
+    sahf
+    LOAD_NEXT_INSTRUCTION_NOCYCLES
 
 
 
