@@ -36,6 +36,19 @@ ENDS
 ; pop af, push af arent great... can they get faster.
 
 
+; various insidious todos
+; IO handlers for not Ex/Fx readwrite
+;  - 0x01, 0x11, 0x21, 0x31, 0x02, 0x12, 0x22, 0x32, 0x34, 0x35, 0x36, 0x08, 0x0A, 0x1A, 0x2A, 0x3A
+;  - 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77, 0x46, 0x56, 0x66, 0x4E, 0x5E, 0x6E, 0x7E
+;  - 0x86, 0x96, 0xA6, 0xB6, 0x8E, 0x9E, 0xAE, 0xBE
+; IO read handlers for non accumulator
+;  - 0x86, 0x96, 0xA6, 0xB6
+
+; 2 byte versions too!
+;  - CB: 06 16 26 36 46 56 66 76 86 96 A6 B6 C6 D6 E6 F6
+;  - CB: 0E 1E 2E 3E 4E 5E 7E 7E 8E 9E AE BE CE DE EE FE
+
+
 COMMENT @
 AX  = scratch
 BX  = HL
@@ -1370,14 +1383,14 @@ OPCODE_DEFINE 0DFh   ; RST 3        ; Z- N- H- C-
 
 OPCODE_DEFINE 0E0h   ; LD (a8), A   ; Z- N- H- C-
     lodsb
-    mov    ah, 0FFh
-    xchg   ax, bx
-    mov    byte ptr ds:[bx], cl ; todo write after test
-    xchg   ax, bx
     lahf
     test  al, al
     jns   handle_io_write_0
     sahf    
+    mov    ah, 0FFh
+    xchg   ax, bx
+    mov    byte ptr ds:[bx], cl
+    xchg   ax, bx
     LOAD_NEXT_INSTRUCTION 3
   handle_io_write_0:
     sahf
@@ -1392,18 +1405,19 @@ OPCODE_DEFINE 0E1h   ; POP HL       ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 3
 
 OPCODE_DEFINE 0E2h   ; LD (C), A    ; Z- N- H- C-
-    mov    ax, bp
-    mov    ah, 0FFh
-    xchg   ax, bx
-    mov    byte ptr ds:[bx], cl ; todo write after test
-    xchg   ax, bx
     lahf
-    test  al, al
-    jns   handle_io_write_1
-    sahf    
+    test  bp, 0080h
+    jz    handle_io_write_1
+    sahf
+    mov   ax, bp
+    mov   ah, 0FFh
+    xchg  ax, bx
+    mov   byte ptr ds:[bx], cl
+    xchg  ax, bx
     LOAD_NEXT_INSTRUCTION 2
   handle_io_write_1:
     sahf
+    mov   ax, bp
     mov   ah, al
     mov   al, IO_WRITE_OFFSET
     IO_MACRO_STORE_CYCLE_COUNT 2
@@ -1456,21 +1470,23 @@ OPCODE_DEFINE 0E9h   ; JP HL        ; Z- N- H- C-
 
 OPCODE_DEFINE 0EAh   ; LD (a16), A  ; Z- N- H- C-
     lodsw
-    xchg  ax, bx
-    mov   byte ptr ds:[bx], cl
-    xchg  ax, bx
+    push  ax   ; ugh
     mov   al, ah
     lahf
     inc   al
-    jz    check_lo_byte_write ; todo write after test
+    jz    check_lo_byte_write
     not_io_write:
-    sahf
+    sahf  
+    pop   ax
+    xchg  ax, bx
+    mov   byte ptr ds:[bx], cl
+    xchg  ax, bx
     LOAD_NEXT_INSTRUCTION 4
   check_lo_byte_write:
-    mov   al, byte ptr ds:[si-2]
-    test  al, al
+    cmp   byte ptr ds:[si-2], al ; al known zero
     js    not_io_write
     sahf
+    pop   ax
     mov   ah, al
     mov   al, IO_WRITE_OFFSET
     IO_MACRO_STORE_CYCLE_COUNT 4
@@ -1501,14 +1517,14 @@ OPCODE_DEFINE 0EFh   ; RST 5        ; Z- N- H- C-
 
 OPCODE_DEFINE 0F0h   ; LD A, (a8)   ; Z- N- H- C-
     lodsb
-    mov    ah, 0FFh
-    xchg   ax, bx
-    mov    cl, byte ptr ds:[bx]
-    xchg   ax, bx
     lahf
     test  al, al
     jns   handle_io_read_0
     sahf    
+    mov    ah, 0FFh
+    xchg   ax, bx
+    mov    cl, byte ptr ds:[bx]
+    xchg   ax, bx
     LOAD_NEXT_INSTRUCTION 3
   handle_io_read_0:
     sahf
@@ -1560,18 +1576,19 @@ OPCODE_DEFINE 0F1h   ; POP AF       ; Z? N? H? C?
   @
 
 OPCODE_DEFINE 0F2h   ; LD A, (C)    ; Z- N- H- C-
-    mov    ax, bp
-    mov    ah, 0FFh
-    xchg   ax, bx
-    mov    cl, byte ptr ds:[bx]
-    xchg   ax, bx
     lahf
-    test  al, al
-    jns   handle_io_read_1
+    test  bp, 0080h
+    jz    handle_io_read_1
     sahf    
+    mov   ax, bp
+    mov   ah, 0FFh
+    xchg  ax, bx
+    mov   cl, byte ptr ds:[bx]
+    xchg  ax, bx
     LOAD_NEXT_INSTRUCTION 3
   handle_io_read_1:
     sahf
+    mov   ax, bp
     mov   ah, al
     mov   al, IO_READ_OFFSET
     IO_MACRO_STORE_CYCLE_COUNT 2
@@ -1645,23 +1662,23 @@ OPCODE_DEFINE 0F9h   ; LD SP, HL    ; Z- N- H- C-
 
 OPCODE_DEFINE 0FAh   ; LD A, (a16)  ; Z- N- H- C-
     lodsw
-    xchg   ax, bx
-    mov    cl, byte ptr ds:[bx]
-    xchg   ax, bx
+    push  ax   ; ugh
     mov   al, ah
     lahf
     inc   al
-    jz    check_lo_byte_read
-    jns   handle_io_read_2
+    jz    check_lo_byte_read 
     not_io_read:
-    sahf    
+    sahf
+    pop   ax
+    xchg  ax, bx
+    mov   cl, byte ptr ds:[bx]
+    xchg  ax, bx
     LOAD_NEXT_INSTRUCTION 3
-  handle_io_read_2:
   check_lo_byte_read:
-    mov   al, byte ptr ds:[si-2]
-    test  al, al
+    cmp   byte ptr ds:[si-2], al ; al known zero
     js    not_io_read
     sahf
+    pop   ax
     mov   ah, al
     mov   al, IO_READ_OFFSET
     IO_MACRO_STORE_CYCLE_COUNT 3
@@ -1685,7 +1702,7 @@ OPCODE_DEFINE 0FEh   ; CP d8        ; Z+ N1 H[3] C[7]
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
 OPCODE_DEFINE 0FFh   ; RST 7        ; Z- N- H- C-
-    ret  ; jump to 
+    ret  ; jump to FF_OPCODE_HANDLER_OFFSET (FEC0)s
 
 ORG FF_OPCODE_HANDLER_OFFSET
 ; FF handler
@@ -1699,9 +1716,11 @@ ORG FF_OPCODE_HANDLER_OFFSET
 IO_WRITE_DEFINE 00h ; FF00 — P1/JOYP: Joypad TODO    
     START_OF_IO_WRITE_00:
     public START_OF_IO_WRITE_00
+    mov   byte ptr ds:[0FF00h], cl
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 IO_WRITE_DEFINE 01h ; FF01 — SB: Serial transfer data TODO
+    ; todo: just for testing. remove eventually.
     handle_serial_write:
     ; print charcter to screen
     mov    ah, 0Eh
@@ -1714,9 +1733,11 @@ IO_WRITE_DEFINE 01h ; FF01 — SB: Serial transfer data TODO
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 IO_WRITE_DEFINE 02h ; FF02 — SC: Serial transfer control  TODO
+    mov   byte ptr ds:[0FF02h], cl
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 IO_WRITE_DEFINE 03h ; empty
+    mov   byte ptr ds:[0FF03h], cl
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 IO_WRITE_DEFINE 04h ; FF04 — DIV: Divider register TODO
@@ -1725,18 +1746,37 @@ IO_WRITE_DEFINE 04h ; FF04 — DIV: Divider register TODO
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 IO_WRITE_DEFINE 05h ; FF05 — TIMA: Timer counter TODO
+    mov   byte ptr ds:[0FF05h], cl
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 IO_WRITE_DEFINE 06h ; FF06 — TMA: Timer modulo TODO
+    mov   byte ptr ds:[0FF06h], cl
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 IO_WRITE_DEFINE 07h ; FF07 — TAC: Timer control TODO
+    mov   byte ptr ds:[0FF07h], cl
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 CURRENT_IO = 08h
 
-REPT 078h
+REPT 0Fh - 08h
     IO_WRITE_DEFINE CURRENT_IO
+        LOAD_NEXT_INSTRUCTION_FROM_IO
+        CURRENT_IO = CURRENT_IO + 1
+ENDM
+
+IO_WRITE_DEFINE 0Fh ; FF0F — IF: Interrupt flag
+    lahf
+    mov   byte ptr ds:[VARIABLE_IF_interrupt_flag_FF0F], cl
+    and   byte ptr ds:[VARIABLE_IF_interrupt_flag_FF0F], 01Fh ; bit mask 
+    sahf
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+CURRENT_IO = 010h
+
+REPT 080h - 010h
+    IO_WRITE_DEFINE CURRENT_IO
+        mov   byte ptr ds:[0FF00h + CURRENT_IO], cl
         LOAD_NEXT_INSTRUCTION_FROM_IO
         CURRENT_IO = CURRENT_IO + 1
 ENDM
@@ -1750,38 +1790,63 @@ IO_READ_DEFINE 00h ; FF00 — P1/JOYP: Joypad TODO
     END_OF_IO_READ_00:
     public END_OF_IO_READ_00
 
+ORG 00740h
+  do_joypad_read_io_handler:
+    mov   cl, byte ptr ds:[0FF00h]
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
 
 IO_READ_DEFINE 01h ; FF01 — SB: Serial transfer data TODO
+    mov   cl, byte ptr ds:[0FF01h]
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 IO_READ_DEFINE 02h ; FF02 — SC: Serial transfer control  TODO
+    mov   cl, byte ptr ds:[0FF02h]
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 IO_READ_DEFINE 03h ; empty
+    mov   cl, 0FFh; byte ptr ds:[0FF03h]
     LOAD_NEXT_INSTRUCTION_FROM_IO
-
 
 IO_READ_DEFINE 04h ; FF04 — DIV: Divider register TODO
     ; TODO: dynamically calculate the value based on current cycle count.
+    mov   cl, byte ptr ds:[0FF04h]
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 
 IO_READ_DEFINE 05h ; FF05 — TIMA: Timer counter TODO
+    mov   cl, byte ptr ds:[0FF05h]
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 
 IO_READ_DEFINE 06h ; FF06 — TMA: Timer modulo TODO
+    mov   cl, byte ptr ds:[0FF06h]
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 
 IO_READ_DEFINE 07h ; FF07 — TAC: Timer control TODO
+    mov   cl, byte ptr ds:[0FF07h]
     LOAD_NEXT_INSTRUCTION_FROM_IO
 
 
 CURRENT_IO = 08h
 
-REPT 078h
+REPT 0Fh - 08h
     IO_READ_DEFINE CURRENT_IO
+        LOAD_NEXT_INSTRUCTION_FROM_IO
+        CURRENT_IO = CURRENT_IO + 1
+ENDM
+
+
+IO_READ_DEFINE 0Fh ; FF0F — IF: Interrupt flag
+    mov   cl, byte ptr ss:[VARIABLE_IF_interrupt_flag_FF0F]
+    LOAD_NEXT_INSTRUCTION_FROM_IO
+
+CURRENT_IO = 010h
+
+REPT 080h - 010h
+    IO_READ_DEFINE CURRENT_IO
+        mov   cl, byte ptr ds:[0FF00h + CURRENT_IO]
         LOAD_NEXT_INSTRUCTION_FROM_IO
         CURRENT_IO = CURRENT_IO + 1
 ENDM
@@ -1794,7 +1859,7 @@ public interrupt_handler
     ; TODO this is colliding with other things in the memory space - named I/O read/write handler 0
     lahf
     ; 1 decrement cycle counters since last interrupt_handler
-    mov   al, byte ptr ds:[0FFFFh]
+    mov   al, byte ptr ds:[0FFFFh] ; FFFF — IE: Interrupt enable
     push  ss
     pop   ds
     lahf
@@ -2021,9 +2086,6 @@ ORG 00640h
     jmp    continue_handling_interrupt_after_joypad
 
 
-ORG 00740h
-  do_joypad_read_io_handler:
-    LOAD_NEXT_INSTRUCTION_FROM_IO
 
 
 ORG 0130h
