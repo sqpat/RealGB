@@ -12,7 +12,6 @@ EXTRN VARIABLE_cycles_until_next_int_vblank
 EXTRN VARIABLE_cycles_until_next_int_stat
 EXTRN VARIABLE_cycles_until_next_int_timer
 EXTRN VARIABLE_cycles_until_next_int_serial
-EXTRN VARIABLE_cycles_until_next_int_joypad
 EXTRN interrupt_handler
 
 CORE1 SEGMENT

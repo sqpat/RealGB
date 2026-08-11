@@ -446,8 +446,7 @@ VARIABLE_cycles_until_next_int_timer:
 dw 0FFFFh
 VARIABLE_cycles_until_next_int_serial:
 dw 0FFFFh
-VARIABLE_cycles_until_next_int_joypad:
-dw 0FFFFh
+
 
 ; write in one word.
 VARIABLE_IE_interrupt_enable_FFFF:
@@ -455,11 +454,17 @@ db 0
 VARIABLE_interrupt_pending_flags:
 db 0
 VARIABLE_IF_interrupt_flag_FF0F:
-dw 0
+db 0E1h, 00  ; vblank on by default.
 VARIABLE_current_timer_control_ticks:
 dw 256 * 64
 VARIABLE_pending_cx_in_interrupt:
 dw 0
+VARIABLE_CACHED_DIV_FF04: ; 
+db 018h, 0  ; default 018h? i guess. likely not imporant.
+VARIABLE_CACHED_TMA_FF06: ; not sure if needed
+db 0, 0  ; default 0
+VARIABLE_CACHED_TIMA_TIMES_TMA:
+dw 0  ; 256 * 256 
 
 VARIABLE_EMULATOR_MEMORY_SEGMENT:
 dw EMULATOR_MEMORY_SEGMENT
@@ -477,6 +482,7 @@ db '000.0 sec   FPS: '
 host_fps:
 db '000.0$'
 
+public VARIABLE_CACHED_TIMA_TIMES_TMA
 public VARIABLE_interrupt_pending_flags
 public VARIABLE_EMULATOR_MEMORY_SEGMENT
 public VARIABLE_pending_cx_in_interrupt
@@ -487,7 +493,7 @@ public VARIABLE_cycles_until_next_int_vblank
 public VARIABLE_cycles_until_next_int_stat
 public VARIABLE_cycles_until_next_int_timer
 public VARIABLE_cycles_until_next_int_serial
-public VARIABLE_cycles_until_next_int_joypad
+
 
 
 public VARIABLE_cycles_since_last_handler
