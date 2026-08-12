@@ -465,6 +465,8 @@ VARIABLE_CACHED_TMA_FF06: ; not sure if needed
 db 0, 0  ; default 0
 VARIABLE_CACHED_TIMA_TIMES_TMA:
 dw 0  ; 256 * 256 
+VARIABLE_FF00_joypad:
+db 0CFh, 0
 
 VARIABLE_EMULATOR_MEMORY_SEGMENT:
 dw EMULATOR_MEMORY_SEGMENT
@@ -493,6 +495,8 @@ public VARIABLE_cycles_until_next_int_vblank
 public VARIABLE_cycles_until_next_int_stat
 public VARIABLE_cycles_until_next_int_timer
 public VARIABLE_cycles_until_next_int_serial
+public VARIABLE_FF00_joypad
+
 
 
 
