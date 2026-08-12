@@ -73,7 +73,6 @@ DEBUG_CYCLE_COUNTER = 1
 
 LOAD_NEXT_INSTRUCTION MACRO cycles
   LOCAL overflow_handler_default
-  IFDEF DEBUG_CYCLE_COUNTER
     lahf
     sub  ch, (cycles shl 1)
     jbe  overflow_handler_default
@@ -83,20 +82,20 @@ LOAD_NEXT_INSTRUCTION MACRO cycles
     jmp  ax
     overflow_handler_default:
     sahf
-    jmp   interrupt_handler
-  ELSEIF
-    lahf
-    sub  ch, (cycles shl 1)
-    jbe  overflow_handler_default
-    sahf
-    lodsb
-    mov  ah, al
-    jmp  ax
-    overflow_handler_default:
-    sahf
-    jmp   interrupt_handler
-  ENDIF
+    jmp   update_cycle_counts
 ENDM
+
+; ah already has flags.
+
+LOAD_NEXT_INSTRUCTION_INTERRUPT MACRO cycles
+    popf ; get jbe state
+    jbe  overflow_handler_interrupt 
+    sahf
+    lodsb
+    mov  ah, al
+    jmp  ax
+ENDM
+
 
 IO_MACRO_STORE_CYCLE_COUNT MACRO cycles
   IFDEF DEBUG_CYCLE_COUNTER
@@ -106,39 +105,11 @@ IO_MACRO_STORE_CYCLE_COUNT MACRO cycles
   ENDIF
 ENDM
 
-LOAD_NEXT_INSTRUCTION_FROM_IO MACRO 
-  LOCAL overflow_handler_io
-  IFDEF DEBUG_CYCLE_COUNTER
-    pushf
-    mov   ax, word ptr ss:[VARIABLE_pending_cycle_count]
-    shl   al, 1
-    sub   ch, al
-    jbe   overflow_handler_io
-    popf
-    lodsb
-    mov  ah, al
-    jmp  ax
-    overflow_handler_io:
-    popf  ; or maybe carry to jmp
-    jmp   interrupt_handler ; if doing the above popf version first
-  ELSE
-    lahf
-    sub   ch, byte ptr ss:[VARIABLE_pending_cycle_count]  ; pre doubled
-    jbe   overflow_handler_io
-    sahf
-    lodsb
-    mov  ah, al
-    jmp  ax
-    overflow_handler_io:
-    sahf  ; or maybe carry to jmp
-    jmp   interrupt_handler
-  ENDIF
-ENDM
+
 
 
 LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
   LOCAL overflow_handler_seg2
-  IFDEF DEBUG_CYCLE_COUNTER
     lahf
     sub   ch, (cycles shl 1)
     jbe   overflow_handler_seg2
@@ -151,22 +122,7 @@ LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
     jmp  dword ptr ss:[VARIABLE_pointer_to_core_1]
   overflow_handler_seg2:
     sahf
-    jmp   interrupt_handler_seg2
-  ELSE
-    lahf
-    sub   ch, (cycles shl 1)
-    jbe   overflow_handler_seg2
-    sahf
-    pop  ax
-    PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
-    lodsb
-    mov  ah, al
-    mov  word ptr ss:[VARIABLE_pointer_to_core_1], ax
-    jmp  dword ptr ss:[VARIABLE_pointer_to_core_1]
-  overflow_handler_seg2:
-    sahf
-    jmp   interrupt_handler_seg2
-  ENDIF
+    jmp   update_cycle_counts_seg2
 ENDM
 
 LOAD_NEXT_INSTRUCTION_NOCYCLES MACRO
@@ -182,7 +138,6 @@ N_FLAG_BIT_GAME_BOY = 040h
 ; turn n flag off, dec n cycles
 LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF MACRO cycles
   LOCAL overflow_handler_off
-  IFDEF DEBUG_CYCLE_COUNTER
     lahf
     sub   ch, (cycles shl 1)     ; 
     jbe   overflow_handler_off
@@ -194,26 +149,11 @@ LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF MACRO cycles
     overflow_handler_off:
     and   ch, (NOT N_FLAG_BIT_CH)
     sahf  ; or maybe carry to jmp
-    jmp   interrupt_handler
-  ELSE
-    lahf
-    sub   ch, (cycles shl 1)     ; 
-    jbe   overflow_handler_off
-    and   ch, (NOT N_FLAG_BIT_CH)
-    sahf
-    lodsb
-    mov   ah, al
-    jmp   ax
-    overflow_handler_off:
-    and   ch, (NOT N_FLAG_BIT_CH)
-    sahf  ; or maybe carry to jmp
-    jmp   interrupt_handler
-  ENDIF
+    jmp   update_cycle_counts
 ENDM
 
 LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON MACRO cycles
   LOCAL overflow_handler_on
-  IFDEF DEBUG_CYCLE_COUNTER
     lahf
     sub   ch, (cycles shl 1)     ; 
     jbe   overflow_handler_on
@@ -225,21 +165,7 @@ LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON MACRO cycles
     overflow_handler_on:
     or    ch, N_FLAG_BIT_CH
     sahf  ; or maybe carry to jmp
-    jmp   interrupt_handler
-  ELSE
-    lahf
-    sub   ch, (cycles shl 1)     ; 
-    jbe   overflow_handler_on
-    or    ch, N_FLAG_BIT_CH
-    sahf
-    lodsb
-    mov   ah, al
-    jmp   ax
-    overflow_handler_on:
-    or    ch, N_FLAG_BIT_CH
-    sahf  ; or maybe carry to jmp
-    jmp   interrupt_handler
-  ENDIF
+    jmp   update_cycle_counts
 ENDM
 
 
@@ -262,8 +188,8 @@ OPCODE_DEFINE MACRO byte
     ORG ( &byte shl 8) + &byte
 ENDM
 
-IO_READ_OFFSET = 0A0h
-IO_WRITE_OFFSET = 0C8h
+IO_READ_OFFSET = 0B0h
+IO_WRITE_OFFSET = 0D0h
 
 IO_WRITE_DEFINE MACRO byte
     ORG ( &byte shl 8) + IO_WRITE_OFFSET

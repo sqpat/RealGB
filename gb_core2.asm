@@ -12,7 +12,7 @@ EXTRN VARIABLE_cycles_until_next_int_vblank
 EXTRN VARIABLE_cycles_until_next_int_stat
 EXTRN VARIABLE_cycles_until_next_int_timer
 EXTRN VARIABLE_cycles_until_next_int_serial
-EXTRN interrupt_handler
+EXTRN update_cycle_counts
 
 CORE1 SEGMENT
     ASSUME CS:CORE1
@@ -1929,10 +1929,10 @@ ORG FF_OPCODE_HANDLER_OFFSET
 
 
 ORG 0030h
-interrupt_handler_seg2:
+update_cycle_counts_seg2:
     pop  ax
     PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
-    mov  word ptr ss:[VARIABLE_pointer_to_core_1], OFFSET interrupt_handler
+    mov  word ptr ss:[VARIABLE_pointer_to_core_1], OFFSET update_cycle_counts
     jmp  dword ptr ss:[VARIABLE_pointer_to_core_1]
 
 

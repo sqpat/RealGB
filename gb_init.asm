@@ -467,6 +467,15 @@ VARIABLE_CACHED_TIMA_TIMES_TMA:
 dw 0  ; 256 * 256 
 VARIABLE_FF00_joypad:
 db 0CFh, 0
+VARIABLE_serial_countdown_active:
+db 0
+VARIABLE_TIMA_countdown_active:
+db 0
+VARIABLE_stat_countdown_active:
+db 0, 0
+
+VARIABLE_cpu_in_halt:
+dw 0
 
 VARIABLE_EMULATOR_MEMORY_SEGMENT:
 dw EMULATOR_MEMORY_SEGMENT
@@ -484,6 +493,10 @@ db '000.0 sec   FPS: '
 host_fps:
 db '000.0$'
 
+public VARIABLE_cpu_in_halt
+public VARIABLE_stat_countdown_active
+public VARIABLE_serial_countdown_active
+public VARIABLE_TIMA_countdown_active
 public VARIABLE_CACHED_TIMA_TIMES_TMA
 public VARIABLE_interrupt_pending_flags
 public VARIABLE_EMULATOR_MEMORY_SEGMENT
