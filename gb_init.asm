@@ -480,6 +480,9 @@ dw 0
 VARIABLE_EMULATOR_MEMORY_SEGMENT:
 dw EMULATOR_MEMORY_SEGMENT
 
+TABLE_TIMER_MUL_LOOKUP:
+db 0, 4, 16, 64
+
 
 gb_cycles_counted:
 db 0Ah, 0Dh, "Game Boy Cycles: "
@@ -493,6 +496,7 @@ db '000.0 sec   FPS: '
 host_fps:
 db '000.0$'
 
+public TABLE_TIMER_MUL_LOOKUP
 public VARIABLE_cpu_in_halt
 public VARIABLE_stat_countdown_active
 public VARIABLE_serial_countdown_active

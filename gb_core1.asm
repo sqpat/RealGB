@@ -25,6 +25,7 @@ EXTRN VARIABLE_serial_countdown_active
 EXTRN VARIABLE_TIMA_countdown_active
 EXTRN VARIABLE_stat_countdown_active
 EXTRN VARIABLE_cpu_in_halt
+EXTRN TABLE_TIMER_MUL_LOOKUP
 
 
 INIT SEGMENT
@@ -1758,12 +1759,50 @@ IO_WRITE_DEFINE 05h ; FF05 — TIMA: Timer counter TODO
     mov   byte ptr ds:[0FF05h], cl
     ret
 
-IO_WRITE_DEFINE 06h ; FF06 — TMA: Timer modulo TODO
+IO_WRITE_DEFINE 06h ; FF06 — TMA: Timer modulo
     mov   byte ptr ds:[0FF06h], cl
     ret
 
-IO_WRITE_DEFINE 07h ; FF07 — TAC: Timer control TODO
-    mov   byte ptr ds:[0FF07h], cl
+ORG  0760h
+  enable_timer:
+    mov   byte ptr ss:[VARIABLE_TIMA_countdown_active], 1  ; known zero
+    push  ax  ;store flags.
+    mov   al, cl
+    and   ax, 3
+    jz    use_256_timer_mul
+    xchg  ax, bx
+    mov   bl, byte ptr ss:[bx + TABLE_TIMER_MUL_LOOKUP]
+    xchg  ax, bx
+
+    ; clock 00 every 256 cycles (times divider)
+    ; clock 01 every 4   cycles (times divider)
+    ; clock 02 every 16  cycles (times divider)
+    ; clock 03 every 64  cycles (times divider)
+    mov   ah, byte ptr ds:[0FF06h]  ; FF06 — TMA: Timer modulo
+    test  ah, ah
+    jz    skip_timer_mul
+    mul   ah 
+  done_with_timer_mul:
+    mov   word ptr ss:[VARIABLE_CACHED_TIMA_TIMES_TMA], ax
+    mov   word ptr ss:[VARIABLE_cycles_until_next_int_timer], ax  ; todo this might require different math...
+    pop   ax  ; restore ah
+    jmp   force_interrupt ; todo  inline?
+  use_256_timer_mul:
+    mov   al, byte ptr ds:[0FF06h]  ; FF06 — TMA: Timer modulo
+  skip_timer_mul:  ; multiply by 256.
+    mov   ah, al
+    xor   al, al
+    jmp   done_with_timer_mul
+
+IO_WRITE_DEFINE 07h ; FF07 — TAC: Timer control 
+    lahf
+    mov   al, cl
+    or    al, 0F8h
+    mov   byte ptr ds:[0FF07h], al
+    and   al, 04h
+    jne   enable_timer
+    mov   byte ptr ss:[VARIABLE_TIMA_countdown_active], al  ; known zero
+    sahf
     ret
 
 CURRENT_IO = 08h
@@ -1849,12 +1888,12 @@ IO_READ_DEFINE 05h ; FF05 — TIMA: Timer counter TODO
     ret
 
 
-IO_READ_DEFINE 06h ; FF06 — TMA: Timer modulo TODO
+IO_READ_DEFINE 06h ; FF06 — TMA: Timer modulo
     mov   al, byte ptr ds:[0FF06h]
     ret
 
 
-IO_READ_DEFINE 07h ; FF07 — TAC: Timer control TODO
+IO_READ_DEFINE 07h ; FF07 — TAC: Timer control
     mov   al, byte ptr ds:[0FF07h]
     ret
 
@@ -2085,8 +2124,10 @@ check_timer:
 ; clock 01 every 4   cycles (times divider)
 ; clock 02 every 16  cycles (times divider)
 ; clock 03 every 64  cycles (times divider)
+    push  ax
     mov   ax, word ptr ds:[VARIABLE_CACHED_TIMA_TIMES_TMA] 
     add   word ptr ds:[VARIABLE_cycles_until_next_int_timer], ax
+    pop   ax
     or    cl, 04h
     jmp   continue_subbing_cycles_after_timer
   check_stat:
