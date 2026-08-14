@@ -499,6 +499,8 @@ dw 0FF00h, 00304h, 00F10h, 03F40h
 VARIABLE_cycles_before_io_readwrite:
 dw 0
 
+VARIABLE_TAC_clock_select_cycles_per_increment_mask:
+db 0
 
 
 gb_cycles_counted:
@@ -513,6 +515,7 @@ db '000.0 sec   FPS: '
 host_fps:
 db '000.0$'
 
+public VARIABLE_TAC_clock_select_cycles_per_increment_mask
 public VARIABLE_cycles_before_io_readwrite
 public VARIABLE_TAC_clock_select_cycles_per_increment_modulo
 public VARIABLE_TAC_clock_select_cycles_per_increment

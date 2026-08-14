@@ -30,6 +30,7 @@ EXTRN VARIABLE_cycles_of_last_DIV_reset
 EXTRN VARIABLE_cycles_of_last_TIMA_reset
 EXTRN VARIABLE_TAC_clock_select_cycles_per_increment
 EXTRN VARIABLE_TAC_clock_select_cycles_per_increment_modulo
+EXTRN VARIABLE_TAC_clock_select_cycles_per_increment_mask
 EXTRN VARIABLE_cycles_before_io_readwrite
 
 
@@ -48,13 +49,6 @@ ENDS
 ; investigate subbing VARIABLE_cycles_before_io_readwrite from ch or something.
 
 
-; various insidious todos
-; IO handlers for not Ex/Fx readwrite
-;  - 0x01, 0x11, 0x21, 0x31, 0x02, 0x12, 0x22, 0x32, 0x34, 0x35, 0x36, 0x08, 0x0A, 0x1A, 0x2A, 0x3A
-;  - 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77, 0x46, 0x56, 0x66, 0x4E, 0x5E, 0x6E, 0x7E
-;  - 0x86, 0x96, 0xA6, 0xB6, 0x8E, 0x9E, 0xAE, 0xBE
-; IO read handlers for non accumulator
-;  - 0x86, 0x96, 0xA6, 0xB6
 
 ; 2 byte versions too!
 ;  - CB: 06 16 26 36 46 56 66 76 86 96 A6 B6 C6 D6 E6 F6
@@ -98,8 +92,24 @@ OPCODE_DEFINE 001h   ; LD BC, d16   ; Z- N- H- C-
     PUBLIC END_OF_OPCODE_01
 
 OPCODE_DEFINE 002h   ; LD (BC), A   ; Z- N- H- C-
+    mov   ax, bp
+    mov   al, ah
+    lahf
+    cmp   al, 0FFh
+    je    check_io_02
+  dont_io_02:
+    sahf
     mov   byte ptr ds:[bp], cl
     LOAD_NEXT_INSTRUCTION 2
+  check_io_02:
+    test  al, al
+    js    dont_io_02
+    sahf
+    mov   ah, al
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    LOAD_NEXT_INSTRUCTION 2    
 
 OPCODE_DEFINE 003h   ; INC BC       ; Z- N- H- C-
     lea  bp, [bp + 1]
@@ -133,9 +143,28 @@ OPCODE_DEFINE 007h   ; RLCA         ; Z0 N0 H0 C[7]
 
 OPCODE_DEFINE 008h   ; LD (a16), SP ; Z- N- H- C-
     lodsw
+    pushf
+    cmp   ah, 0FFh
+    je    check_io_08
+    popf
+  dont_io_08:
     xchg  ax, di
     mov   word ptr ds:[di], ax
     xchg  ax, di
+    LOAD_NEXT_INSTRUCTION 5
+  check_io_08:
+    test  ah, ah
+    js    dont_io_08
+    popf
+    push  cx
+    xchg  ax, di
+    mov   cl, al
+    xchg  ax, di
+    mov   ah, al
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 4
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    pop   cx
     LOAD_NEXT_INSTRUCTION 5
 
 OPCODE_DEFINE 009h   ; ADD HL, BC   ; Z- N0 H11 C15
@@ -153,8 +182,25 @@ OPCODE_DEFINE 009h   ; ADD HL, BC   ; Z- N0 H11 C15
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 00Ah   ; LD A, (BC)   ; Z- N- H- C-
+    mov   ax, bp
+    mov   al, ah
+    lahf
+    cmp   al, 0FFh
+    je    check_io_0A
+  dont_io_0A:
+    sahf
     mov   cl, byte ptr ds:[bp]
     LOAD_NEXT_INSTRUCTION 2
+  check_io_0A:
+    test  al, al
+    js    dont_io_0A
+    sahf
+    mov   ah, al
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    mov   cl, al
+    LOAD_NEXT_INSTRUCTION 2   
 
 OPCODE_DEFINE 00Bh   ; DEC BC       ; Z- N- H- C-
     lea  bp, [bp - 1]
@@ -196,9 +242,23 @@ OPCODE_DEFINE 011h   ; LD DE, d16   ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 3
 
 OPCODE_DEFINE 012h   ; LD (DE), A   ; Z- N- H- C-
+    lahf
+    cmp   dh, 0FFh
+    je    check_io_12
+  dont_io_12:
+    sahf
     xchg  dx, bx
     mov   byte ptr ds:[bx], cl
     xchg  dx, bx
+    LOAD_NEXT_INSTRUCTION 2
+  check_io_12:
+    test  dh, dh
+    js    dont_io_12
+    sahf
+    mov   ah, dl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 013h   ; INC DE       ; Z- N- H- C-
@@ -257,9 +317,24 @@ OPCODE_DEFINE 019h   ; ADD HL, DE   ; Z- N0 H11 C15
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 01Ah   ; LD A, (DE)   ; Z- N- H- C-
+    lahf
+    cmp   dh, 0FFh
+    je    check_io_1A
+  dont_io_1A:
+    sahf
     xchg bx, dx
     mov  cl, byte ptr ds:[bx]
     xchg bx, dx
+    LOAD_NEXT_INSTRUCTION 2
+  check_io_1A:
+    test  dh, dh
+    js    dont_io_1A
+    sahf
+    mov   ah, dl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    mov   cl, al
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 01Bh   ; DEC DE       ; Z- N- H- C-
@@ -304,9 +379,25 @@ OPCODE_DEFINE 021h   ; LD HL, d16   ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 3
 
 OPCODE_DEFINE 022h   ; LD (HL+), A  ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_22
+  dont_io_22:
+    sahf
     mov   byte ptr ds:[bx], cl
     lea   bx, [bx + 1]
     LOAD_NEXT_INSTRUCTION 2
+  check_io_22:
+    test  bl, bl
+    js    dont_io_22
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    lea   bx, [bx + 1]
+    LOAD_NEXT_INSTRUCTION 2
+
 
 OPCODE_DEFINE 023h   ; INC HL       ; Z- N- H- C-
     lea  bx, [bx + 1]
@@ -425,9 +516,27 @@ OPCODE_DEFINE 029h   ; ADD HL, HL   ; Z- N0 H[11] C[15]
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 02Ah   ; LD A, (HL+)  ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_2A
+  dont_io_2A:
+    sahf
     mov  cl, byte ptr ds:[bx]
     lea  bx, [bx + 1]
     LOAD_NEXT_INSTRUCTION 2
+  check_io_2A:
+    test  bl, bl
+    js    dont_io_2A
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    mov   cl, al
+    lea  bx, [bx + 1]
+    LOAD_NEXT_INSTRUCTION 2
+
+
 
 OPCODE_DEFINE 02Bh   ; DEC HL       ; Z- N- H- C-
     lea  bx, [bx - 1]
@@ -470,25 +579,104 @@ OPCODE_DEFINE 031h   ; LD SP, d16   ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 3
 
 OPCODE_DEFINE 032h   ; LD (HL-), A  ; Z- N- H- C-
-    mov  byte ptr ds:[bx], cl
-    lea  bx, [bx - 1]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_32
+  dont_io_32:
+    sahf
+    mov   byte ptr ds:[bx], cl
+    lea   bx, [bx - 1]
     LOAD_NEXT_INSTRUCTION 2
+  check_io_32:
+    test  bl, bl
+    js    dont_io_32
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    lea   bx, [bx - 1]
+    LOAD_NEXT_INSTRUCTION 2
+
 
 OPCODE_DEFINE 033h   ; INC SP       ; Z- N- H- C-
     lea  di, [di + 1]
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 034h   ; INC (HL)     ; Z+ N0 H[3] C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_34
+  dont_io_34:
+    sahf
     inc  byte ptr ds:[bx]
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 3
+  check_io_34:
+    test  bl, bl
+    js    dont_io_34
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 2
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    lahf
+    inc   al
+    sahf
+    push  cx
+    mov   cl, al
+    mov   ah, bl
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    pop   cx
+    LOAD_NEXT_INSTRUCTION 3
 
 OPCODE_DEFINE 035h   ; DEC (HL)     ; Z+ N0 H[3] C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_35
+  dont_io_35:
+    sahf
     dec  byte ptr ds:[bx]
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 3
+  check_io_35:
+    test  bl, bl
+    js    dont_io_35
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 2
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    lahf
+    dec   al
+    sahf
+    push  cx
+    mov   cl, al
+    mov   ah, bl
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    pop   cx
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 3
 
 OPCODE_DEFINE 036h   ; LD (HL), d8  ; Z- N- H- C-
     lodsb
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_36
+  dont_io_36:
+    sahf
     mov   byte ptr ds:[bx], al
+    LOAD_NEXT_INSTRUCTION 3
+  check_io_36:
+    test  bl, bl
+    js    dont_io_36
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 2
+    push  cx
+    mov   cl, al
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    pop   cx
     LOAD_NEXT_INSTRUCTION 3
 
 OPCODE_DEFINE 037h   ; SCF          ; Z- N0 H0 C[7]
@@ -524,7 +712,23 @@ OPCODE_DEFINE 039h   ; ADD HL, SP   ; Z- N0 H11 C15
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
 OPCODE_DEFINE 03Ah   ; LD A, (HL-)   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_3A
+  dont_io_3A:
+    sahf
     mov  cl, byte ptr ds:[bx]
+    lea  bx, [bx - 1]
+    LOAD_NEXT_INSTRUCTION 2
+  check_io_3A:
+    test  bl, bl
+    js    dont_io_3A
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    mov   cl, al
     lea  bx, [bx - 1]
     LOAD_NEXT_INSTRUCTION 2
 
@@ -586,9 +790,30 @@ OPCODE_DEFINE 045h   ; LD B, L      ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 046h   ; LD B, (HL)   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_46
+  dont_io_46:
+    sahf
     xchg  ax, bp
     mov   ah, byte ptr ds:[bx]
     xchg  ax, bp
+    LOAD_NEXT_INSTRUCTION 2
+  check_io_46:
+    test  bl, bl
+    js    dont_io_46
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    ; put al into bp high
+; todo: improve
+    xchg  al, bl
+    xchg  ax, bp
+    mov   ah, bl
+    xchg  ax, bp
+    mov   bl, al
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 047h   ; LD B, A      ; Z- N- H- C-
@@ -631,9 +856,30 @@ OPCODE_DEFINE 04Dh   ; LD C, L      ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 04Eh   ; LD C, (HL)   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_4E
+  dont_io_4E:
+    sahf
     xchg  ax, bp
     mov   al, byte ptr ds:[bx]
     xchg  ax, bp
+    LOAD_NEXT_INSTRUCTION 2
+  check_io_4E:
+    test  bl, bl
+    js    dont_io_4E
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    ; put al into bp low
+; todo: improve
+    xchg  al, bl
+    xchg  ax, bp
+    mov   al, bl
+    xchg  ax, bp
+    mov   bl, al
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 04Fh   ; LD C, A      ; Z- N- H- C-
@@ -670,7 +916,22 @@ OPCODE_DEFINE 055h   ; LD D, L      ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 056h   ; LD D, (HL)   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_56
+  dont_io_56:
+    sahf
     mov   dh, byte ptr ds:[bx]
+    LOAD_NEXT_INSTRUCTION 2
+  check_io_56:
+    test  bl, bl
+    js    dont_io_56
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    mov   dh, al
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 057h   ; LD D, A      ; Z- N- H- C-
@@ -705,7 +966,22 @@ OPCODE_DEFINE 05Dh   ; LD E, L      ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 05Eh   ; LD E, (HL)   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_5E
+  dont_io_5E:
+    sahf
     mov   dl, byte ptr ds:[bx]
+    LOAD_NEXT_INSTRUCTION 2
+  check_io_5E:
+    test  bl, bl
+    js    dont_io_5E
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    mov   dl, al
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 05Fh   ; LD E, A      ; Z- N- H- C-
@@ -740,7 +1016,22 @@ OPCODE_DEFINE 065h   ; LD H, L      ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 066h   ; LD H, (HL)   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_66
+  dont_io_66:
+    sahf
     mov   bh, byte ptr ds:[bx]
+    LOAD_NEXT_INSTRUCTION 2
+  check_io_66:
+    test  bl, bl
+    js    dont_io_66
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    mov   bh, al
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 067h   ; LD H, A      ; Z- N- H- C-
@@ -775,54 +1066,193 @@ OPCODE_DEFINE 06Dh   ; LD L, L      ; Z- N- H- C-
     LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 06Eh   ; LD L, (HL)   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_6E
+  dont_io_6E:
+    sahf
     mov   bl, byte ptr ds:[bx]
+    LOAD_NEXT_INSTRUCTION 2
+  check_io_6E:
+    test  bl, bl
+    js    dont_io_6E
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    mov   bl, al
     LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 06Fh   ; LD L, A      ; Z- N- H- C-
     mov   bl, cl
     LOAD_NEXT_INSTRUCTION 1
 
+ORG 07040h
+  check_io_70:
+    test  bl, bl
+    js    dont_io_70
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    push  cx
+    mov   cl, al
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    pop   cx
+    LOAD_NEXT_INSTRUCTION 2
 OPCODE_DEFINE 070h   ; LD (HL), B   ; Z- N- H- C-
-    xchg  ax, bp
-    mov   byte ptr ds:[bx], ah
-    xchg  ax, bp
-    LOAD_NEXT_INSTRUCTION 2
-
-OPCODE_DEFINE 071h   ; LD (HL), C   ; Z- N- H- C-
-    xchg  ax, bp
+    mov   ax, bp
+    mov   al, ah
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_70
+  dont_io_70:
+    sahf
     mov   byte ptr ds:[bx], al
-    xchg  ax, bp
     LOAD_NEXT_INSTRUCTION 2
 
+ORG 7140h
+  check_io_71:
+    test  bl, bl
+    js    dont_io_71
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    push  cx
+    mov   cl, al
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    pop   cx
+    LOAD_NEXT_INSTRUCTION 2
+OPCODE_DEFINE 071h   ; LD (HL), C   ; Z- N- H- C-
+    mov   ax, bp
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_71
+  dont_io_71:
+    sahf
+    mov   byte ptr ds:[bx], al
+    LOAD_NEXT_INSTRUCTION 2
+
+
+ORG 07240h
+  check_io_72:
+    test  bl, bl
+    js    dont_io_72
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_WRITE_OFFSET
+    push  cx
+    mov   cl, dh
+    call  ax  ; IO handler 
+    pop   cx
+    LOAD_NEXT_INSTRUCTION 2
 OPCODE_DEFINE 072h   ; LD (HL), D   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_72
+  dont_io_72:
+    sahf
     mov   byte ptr ds:[bx], dh
     LOAD_NEXT_INSTRUCTION 2
 
+
+
+ORG 07340h
+  check_io_73:
+    test  bl, bl
+    js    dont_io_73
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_WRITE_OFFSET
+    push  cx
+    mov   cl, dl
+    call  ax  ; IO handler 
+    pop   cx
+    LOAD_NEXT_INSTRUCTION 2
 OPCODE_DEFINE 073h   ; LD (HL), E   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_73
+  dont_io_73:
+    sahf
     mov   byte ptr ds:[bx], dl
     LOAD_NEXT_INSTRUCTION 2
 
+ORG 07440h
+  check_io_74:
+    test  bl, bl
+    js    dont_io_74
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_WRITE_OFFSET
+    push  cx
+    mov   cl, bh
+    call  ax  ; IO handler 
+    pop   cx
+    LOAD_NEXT_INSTRUCTION 2
 OPCODE_DEFINE 074h   ; LD (HL), H   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_74
+  dont_io_74:
+    sahf
     mov   byte ptr ds:[bx], bh
     LOAD_NEXT_INSTRUCTION 2
 
-OPCODE_DEFINE 075h   ; LD (HL), L   ; Z- N- H- C-
-    mov   byte ptr ds:[bx],  bl
+ORG 7540h
+  check_io_75:
+    test  bl, bl
+    js    dont_io_75
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_WRITE_OFFSET
+    push  cx
+    mov   cl, bl
+    call  ax  ; IO handler 
+    pop   cx
     LOAD_NEXT_INSTRUCTION 2
-
+OPCODE_DEFINE 075h   ; LD (HL), L   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_75
+  dont_io_75:
+    sahf
+    mov   byte ptr ds:[bx], bl
+    LOAD_NEXT_INSTRUCTION 2
 
 OPCODE_DEFINE 076h   ; HALT         ; Z- N- H- C-
 rerun_halt_opcode:
     ; burn cycles until interrupt?
     ; todo should this introduce some emulation delay?  
     lahf
-    or    ch, (NOT N_FLAG_BIT_CH)   ; skip full count.
+    and   ch, N_FLAG_BIT_CH   ; skip full count.
     sahf        
     inc   byte ptr ss:[VARIABLE_cpu_in_halt]
     jmp   update_cycle_counts
 
 
+ORG 07740h
+  check_io_77:
+    test  bl, bl
+    js    dont_io_77
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    LOAD_NEXT_INSTRUCTION 2
 OPCODE_DEFINE 077h   ; LD (HL), A   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_77
+  dont_io_77:
+    sahf
     mov   byte ptr ds:[bx], cl
     LOAD_NEXT_INSTRUCTION 2
 
@@ -854,7 +1284,23 @@ OPCODE_DEFINE 07Dh   ; LD A, L      ; Z- N- H- C-
     mov   cl, bl
     LOAD_NEXT_INSTRUCTION 1
 
+ORG 07E40h
+  check_io_7E:
+    test  bl, bl
+    js    dont_io_7E
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    mov   cl, al
+    LOAD_NEXT_INSTRUCTION 2
 OPCODE_DEFINE 07Eh   ; LD A, (HL)   ; Z- N- H- C-
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_7E
+  dont_io_7E:
+    sahf
     mov   cl, byte ptr ds:[bx]
     LOAD_NEXT_INSTRUCTION 2
 
@@ -889,7 +1335,23 @@ OPCODE_DEFINE 085h   ; ADD A, L     ; Z+ N0 H[3] C[7]
     add   cl, bl
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
+ORG 08650h
+  check_io_86:
+    test  bl, bl
+    js    dont_io_86
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    mov   cl, al
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 OPCODE_DEFINE 086h   ; ADD A, (HL)  ; Z+ N0 H[3] C[7]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_86
+  dont_io_86:
+    sahf
     add   cl, byte ptr ds:[bx]
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
@@ -925,7 +1387,23 @@ OPCODE_DEFINE 08Dh   ; ADC A, L     ; Z+ N0 H[3] C[7]
     adc   cl, bl
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
+ORG 08E50h
+  check_io_8E:
+    test  bl, bl
+    js    dont_io_8E
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    adc   cl, al
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 OPCODE_DEFINE 08Eh   ; ADD AC (HL)  ; Z+ N0 H[3] C[7]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_8E
+  dont_io_8E:
+    sahf
     adc   cl, byte ptr ds:[bx]
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
@@ -961,7 +1439,23 @@ OPCODE_DEFINE 095h   ; SUB L        ; Z+ N1 H[3] C[7]
     sub   cl, bl
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
+ORG 09650h
+  check_io_96:
+    test  bl, bl
+    js    dont_io_96
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    sub   cl, al
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 OPCODE_DEFINE 096h   ; SUB (HL)     ; Z+ N1 H[3] C[7]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_96
+  dont_io_96:
+    sahf    
     sub   cl, byte ptr ds:[bx]
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
@@ -997,7 +1491,24 @@ OPCODE_DEFINE 09Dh   ; SBC L        ; Z+ N1 H[3] C[7]
     sbb   cl, bl
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
+
+ORG 09E50h
+  check_io_9E:
+    test  bl, bl
+    js    dont_io_9E
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    sbb   cl, al
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 OPCODE_DEFINE 09Eh   ; SBC (HL)     ; Z+ N1 H[3] C[7]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_9E
+  dont_io_9E:
+    sahf
     sbb   cl, byte ptr ds:[bx]
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
@@ -1051,7 +1562,26 @@ OPCODE_DEFINE 0A5h   ; AND L        ; Z+ N0 H1 C0
     sahf
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
+ORG 0A670h
+  check_io_A6:
+    test  bl, bl
+    js    dont_io_A6
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    and   cl, al
+    lahf
+    or    ah, 010h       ; turn on AF
+    sahf
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 OPCODE_DEFINE 0A6h   ; AND (HL)     ; Z+ N0 H1 C0
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_A6
+  dont_io_A6:
+    sahf
     and   cl, byte ptr ds:[bx]
     lahf
     or    ah, 010h       ; turn on AF
@@ -1093,7 +1623,23 @@ OPCODE_DEFINE 0ADh   ; XOR L        ; Z+ N0 H0 C0
     xor   cl, bl
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
+ORG 0AE90h
+  check_io_AE:
+    test  bl, bl
+    js    dont_io_AE
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    xor   cl, al
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 OPCODE_DEFINE 0AEh   ; XOR (HL)     ; Z+ N0 H0 C0
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_AE
+  dont_io_AE:
+    sahf
     xor   cl, byte ptr ds:[bx]
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
@@ -1129,7 +1675,24 @@ OPCODE_DEFINE 0B5h   ; OR L        ; Z+ N0 H0 C0
     or    cl, bl
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 1
 
+
+ORG 0B680h
+  check_io_B6:
+    test  bl, bl
+    js    dont_io_B6
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    or    cl, al
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 OPCODE_DEFINE 0B6h   ; OR (HL)     ; Z+ N0 H0 C0
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_B6
+  dont_io_B6:
+    sahf
     or    cl, byte ptr ds:[bx]
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_OFF 2
 
@@ -1165,8 +1728,24 @@ OPCODE_DEFINE 0BDh   ; CP L        ; Z+ N1 H[3] C[7]
     cmp    cl, bl
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
+ORG 0BE80h
+  check_io_BE:
+    test  bl, bl
+    js    dont_io_BE
+    sahf
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    cmp   cl, al
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 OPCODE_DEFINE 0BEh   ; CP (HL)     ; Z+ N1 H[3] C[7]
-    cmp    cl, byte ptr ds:[bx]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_BE
+  dont_io_BE:
+    sahf
+    cmp   cl, byte ptr ds:[bx]
     LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
 OPCODE_DEFINE 0BFh   ; CP A        ; Z+ N1 H[3] C[7]
@@ -1391,14 +1970,14 @@ OPCODE_DEFINE 0E0h   ; LD (a8), A   ; Z- N- H- C-
     lodsb
     lahf
     test  al, al
-    jns   handle_io_write_0
+    jns   handle_io_write_E0
     sahf    
     mov    ah, 0FFh
     xchg   ax, bx
     mov    byte ptr ds:[bx], cl
     xchg   ax, bx
     LOAD_NEXT_INSTRUCTION 3
-  handle_io_write_0:
+  handle_io_write_E0:
     mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 2  ; todo consider just sub from ah and add again later
     sahf
     mov   ah, al
@@ -1415,7 +1994,7 @@ OPCODE_DEFINE 0E1h   ; POP HL       ; Z- N- H- C-
 OPCODE_DEFINE 0E2h   ; LD (C), A    ; Z- N- H- C-
     lahf
     test  bp, 0080h
-    jz    handle_io_write_1
+    jz    handle_io_write_E2
     sahf
     mov   ax, bp
     mov   ah, 0FFh
@@ -1423,7 +2002,7 @@ OPCODE_DEFINE 0E2h   ; LD (C), A    ; Z- N- H- C-
     mov   byte ptr ds:[bx], cl
     xchg  ax, bx
     LOAD_NEXT_INSTRUCTION 2
-  handle_io_write_1:
+  handle_io_write_E2:
     mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
     sahf
     mov   ax, bp
@@ -1483,17 +2062,17 @@ OPCODE_DEFINE 0EAh   ; LD (a16), A  ; Z- N- H- C-
     mov   al, ah
     lahf
     inc   al
-    jz    check_lo_byte_write
-    not_io_write:
+    jz    check_io_EA
+  dont_io_EA:
     sahf  
     pop   ax
     xchg  ax, bx
     mov   byte ptr ds:[bx], cl
     xchg  ax, bx
     LOAD_NEXT_INSTRUCTION 4
-  check_lo_byte_write:
+  check_io_EA:
     cmp   byte ptr ds:[si-2], al ; al known zero
-    js    not_io_write
+    js    dont_io_EA
     mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 3
     sahf
     pop   ax
@@ -1529,14 +2108,14 @@ OPCODE_DEFINE 0F0h   ; LD A, (a8)   ; Z- N- H- C-
     lodsb
     lahf
     test  al, al
-    jns   handle_io_read_0
+    jns   handle_io_read_F0
     sahf    
     mov    ah, 0FFh
     xchg   ax, bx
     mov    cl, byte ptr ds:[bx]
     xchg   ax, bx
     LOAD_NEXT_INSTRUCTION 3
-  handle_io_read_0:
+  handle_io_read_F0:
     mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 2
     sahf
     mov   ah, al
@@ -1590,7 +2169,7 @@ OPCODE_DEFINE 0F1h   ; POP AF       ; Z? N? H? C?
 OPCODE_DEFINE 0F2h   ; LD A, (C)    ; Z- N- H- C-
     lahf
     test  bp, 0080h
-    jz    handle_io_read_1
+    jz    handle_io_read_F2
     sahf    
     mov   ax, bp
     mov   ah, 0FFh
@@ -1598,7 +2177,7 @@ OPCODE_DEFINE 0F2h   ; LD A, (C)    ; Z- N- H- C-
     mov   cl, byte ptr ds:[bx]
     xchg  ax, bx
     LOAD_NEXT_INSTRUCTION 2
-  handle_io_read_1:
+  handle_io_read_F2:
     mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
     sahf
     mov   ax, bp
@@ -1680,17 +2259,17 @@ OPCODE_DEFINE 0FAh   ; LD A, (a16)  ; Z- N- H- C-
     mov   al, ah
     lahf
     inc   al
-    jz    check_lo_byte_read 
-    not_io_read:
+    jz    check_io_FA 
+  dont_io_FA:
     sahf
     pop   ax
     xchg  ax, bx
     mov   cl, byte ptr ds:[bx]
     xchg  ax, bx
     LOAD_NEXT_INSTRUCTION 4
-  check_lo_byte_read:
+  check_io_FA:
     cmp   byte ptr ds:[si-2], al ; al known zero
-    js    not_io_read
+    js    dont_io_FA
     mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 3
     sahf
     pop   ax
@@ -1849,6 +2428,7 @@ IO_WRITE_DEFINE 06h ; FF06 — TMA: Timer modulo
 ORG  073Fh
   use_256_timer_mul:
     mov   word ptr ss:[VARIABLE_TAC_clock_select_cycles_per_increment], ax ; known zero
+    ;mov   byte ptr ss:[VARIABLE_TAC_clock_select_cycles_per_increment_mask], al ; NOT FF = 00
     mov   al, byte ptr ds:[0FF06h]  ; FF06 — TMA: Timer modulo
   skip_timer_mul:  ; multiply by 256.
     ; TODO known bug note: 65536 = 0 becomes 65535 which works fine with jc logic.
@@ -1895,6 +2475,8 @@ ORG  073Fh
     mov   bx, word ptr ss:[bx + TABLE_TIMER_MUL_LOOKUP]
     xchg  ax, bx
     mov   word ptr ss:[VARIABLE_TAC_clock_select_cycles_per_increment], ax ; write both at once.
+    ;not   ah
+    ;mov   byte ptr ss:[VARIABLE_TAC_clock_select_cycles_per_increment_mask], ah
 
     ; clock 00 every 256 cycles (times divider)
     ; clock 01 every 4   cycles (times divider)
@@ -1907,7 +2489,7 @@ ORG  073Fh
     jmp   done_with_timer_mul
 
     end_of_enable_timer:
-    public end_of_enable_timer ; 7B0  up to 7B0 ok.
+    public end_of_enable_timer ; 7bb  up to 7B0 ok.
 
 IO_WRITE_DEFINE 07h ; FF07 — TAC: Timer control 
     lahf
