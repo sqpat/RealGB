@@ -75,7 +75,7 @@ LOAD_NEXT_INSTRUCTION MACRO cycles
   LOCAL overflow_handler_default
     lahf
     sub  ch, (cycles shl 1)
-    jbe  overflow_handler_default
+    jbe  overflow_handler_default  ; todo jc?
     sahf
     lodsb
     mov  ah, al
@@ -112,7 +112,7 @@ LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
   LOCAL overflow_handler_seg2
     lahf
     sub   ch, (cycles shl 1)
-    jbe   overflow_handler_seg2
+    jbe   overflow_handler_seg2  ; todo jc
     sahf
     pop  ax
     PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET

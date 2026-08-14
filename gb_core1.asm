@@ -26,6 +26,11 @@ EXTRN VARIABLE_TIMA_countdown_active
 EXTRN VARIABLE_stat_countdown_active
 EXTRN VARIABLE_cpu_in_halt
 EXTRN TABLE_TIMER_MUL_LOOKUP
+EXTRN VARIABLE_cycles_of_last_DIV_reset
+EXTRN VARIABLE_cycles_of_last_TIMA_reset
+EXTRN VARIABLE_TAC_clock_select_cycles_per_increment
+EXTRN VARIABLE_TAC_clock_select_cycles_per_increment_modulo
+EXTRN VARIABLE_cycles_before_io_readwrite
 
 
 INIT SEGMENT
@@ -40,6 +45,7 @@ ENDS
 ; ch flag set/unset is pretty nasty now with sahf/lahf
 ; DAA using x86 decimal adjust instructions is slow and bad
 ; pop af, push af arent great... can they get faster.
+; investigate subbing VARIABLE_cycles_before_io_readwrite from ch or something.
 
 
 ; various insidious todos
@@ -179,7 +185,7 @@ OPCODE_DEFINE 00Fh   ; RRCA         ; Z0 N0 H0 C[0]
 
 OPCODE_DEFINE 010h   ; STOP         ; Z- N- H- C-
     ; TODO.
-    mov   byte ptr ds:[0FF04h], 0 ; reset timer
+    ;mov   byte ptr ds:[VARIABLE_cycles_of_last_DIV_reset], 0 ; reset timer
 
     jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
     LOAD_NEXT_INSTRUCTION 1
@@ -433,7 +439,7 @@ OPCODE_DEFINE 02Ch   ; INC L        ; Z+ N0 H[3] C-
 
 OPCODE_DEFINE 02Dh   ; DEC L        ; Z+ N0 H[3] C-
     dec  bl
-    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
 
 OPCODE_DEFINE 02Eh   ; LD L, d8     ; Z- N- H- C-
     lodsb
@@ -1161,7 +1167,7 @@ OPCODE_DEFINE 0BDh   ; CP L        ; Z+ N1 H[3] C[7]
 
 OPCODE_DEFINE 0BEh   ; CP (HL)     ; Z+ N1 H[3] C[7]
     cmp    cl, byte ptr ds:[bx]
-    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 1
+    LOAD_NEXT_INSTRUCTION_SET_N_FLAG_ON 2
 
 OPCODE_DEFINE 0BFh   ; CP A        ; Z+ N1 H[3] C[7]
     cmp    cl, cl
@@ -1339,7 +1345,10 @@ OPCODE_DEFINE 0D9h   ; RETI         ; Z- N- H- C-
     mov    byte ptr ss:[VARIABLE_IME_flag], 1
     mov    si, word ptr ds:[di]
     lea    di, [di + 2] ; pop off stack.
-    jmp    update_cycle_counts
+    ; force interrupt
+    lahf
+  call force_interrupt
+    LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0DAh   ; JP C, a16    ; Z- N- H- C-
     lodsw
@@ -1390,6 +1399,7 @@ OPCODE_DEFINE 0E0h   ; LD (a8), A   ; Z- N- H- C-
     xchg   ax, bx
     LOAD_NEXT_INSTRUCTION 3
   handle_io_write_0:
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 2  ; todo consider just sub from ah and add again later
     sahf
     mov   ah, al
     mov   al, IO_WRITE_OFFSET
@@ -1414,6 +1424,7 @@ OPCODE_DEFINE 0E2h   ; LD (C), A    ; Z- N- H- C-
     xchg  ax, bx
     LOAD_NEXT_INSTRUCTION 2
   handle_io_write_1:
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
     sahf
     mov   ax, bp
     mov   ah, al
@@ -1483,6 +1494,7 @@ OPCODE_DEFINE 0EAh   ; LD (a16), A  ; Z- N- H- C-
   check_lo_byte_write:
     cmp   byte ptr ds:[si-2], al ; al known zero
     js    not_io_write
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 3
     sahf
     pop   ax
     mov   ah, al
@@ -1525,6 +1537,7 @@ OPCODE_DEFINE 0F0h   ; LD A, (a8)   ; Z- N- H- C-
     xchg   ax, bx
     LOAD_NEXT_INSTRUCTION 3
   handle_io_read_0:
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 2
     sahf
     mov   ah, al
     mov   al, IO_READ_OFFSET
@@ -1586,6 +1599,7 @@ OPCODE_DEFINE 0F2h   ; LD A, (C)    ; Z- N- H- C-
     xchg  ax, bx
     LOAD_NEXT_INSTRUCTION 2
   handle_io_read_1:
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 1
     sahf
     mov   ax, bp
     mov   ah, al
@@ -1673,21 +1687,24 @@ OPCODE_DEFINE 0FAh   ; LD A, (a16)  ; Z- N- H- C-
     xchg  ax, bx
     mov   cl, byte ptr ds:[bx]
     xchg  ax, bx
-    LOAD_NEXT_INSTRUCTION 3
+    LOAD_NEXT_INSTRUCTION 4
   check_lo_byte_read:
     cmp   byte ptr ds:[si-2], al ; al known zero
     js    not_io_read
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 3
     sahf
     pop   ax
     mov   ah, al
     mov   al, IO_READ_OFFSET
     call  ax  ; IO handler 
     mov   cl, al
-    LOAD_NEXT_INSTRUCTION 3
+    LOAD_NEXT_INSTRUCTION 4
 
 OPCODE_DEFINE 0FBh   ; EI           ; Z- N- H- C-
     mov    byte ptr ss:[VARIABLE_IME_flag], 1
-    jmp    update_cycle_counts
+    lahf
+    call force_interrupt
+    LOAD_NEXT_INSTRUCTION 1
 
 OPCODE_DEFINE 0FCh   ; xxxx         ; Z- N- H- C-
     jmp   dword ptr ss:[VARIABLE_BAD_OPCODE_handler]
@@ -1750,29 +1767,134 @@ IO_WRITE_DEFINE 03h ; empty
     mov   byte ptr ds:[0FF03h], cl
     ret
 
-IO_WRITE_DEFINE 04h ; FF04 — DIV: Divider register TODO
-    mov   byte ptr ds:[0FF04h], 0 ; . Writing any value to this register resets it to $00. 
-    ; TODO: reset, recalcualte interrupt counts
+IO_WRITE_DEFINE 04h ; FF04 — DIV: Divider register
+    mov   ax, word ptr ss:[VARIABLE_CYCLE_COUNT]
+    mov   word ptr ss:[VARIABLE_cycles_of_last_DIV_reset], ax ; . Writing any value to this register resets it to $00. 
     ret
 
-IO_WRITE_DEFINE 05h ; FF05 — TIMA: Timer counter TODO
-    mov   byte ptr ds:[0FF05h], cl
+ORG 0560h
+  mul_al_by_neg_cl:
+    neg   cl
+    mul   cl
+    neg   cl
+  done_with_FF05_mul:
+    dec   ax  ; dec one because we jc not jbe
+    
+    ; FORCE INTERRUPT INLINE, plus add back to VARIABLE_cycles_until_next_int_timer
+    push  cx
+    shr   ch, 1
+    sub   byte ptr ss:[VARIABLE_cycles_since_last_handler], ch
+    
+    mov   ch, byte ptr ss:[VARIABLE_CYCLE_COUNT]
+    add   ch, byte ptr ss:[VARIABLE_cycles_since_last_handler]
+    add   ch, byte ptr ss:[VARIABLE_cycles_before_io_readwrite]
+    and   ch, byte ptr ss:[VARIABLE_TAC_clock_select_cycles_per_increment_modulo]
+    jz    FF05_write_clock_aligned_TIMA_skip_sub_1
+    dec   ax
+    FF05_write_clock_aligned_TIMA_skip_sub_1:
+    pop   cx
+    and   ch, N_FLAG_BIT_CH
+    ; 9774 VARIABLE_CYCLE_COUNT
+    ; 3ff to 401
+    ; 401 to 42d 
+    ; 2d.
+    ; 97A1 for last....
+    ; forced interrupt
+    ; 97A3 VARIABLE_CYCLE_COUNT (advance 2F. now last is 2 cycles ago. and next is ... 9BA5)
+
+    add   ax, word ptr ss:[VARIABLE_cycles_before_io_readwrite]          ; how many cycles are we into the current instruction? account for this.
+
+    add   ax, word ptr ss:[VARIABLE_cycles_since_last_handler]  ; these cycles are about to be subtracted, and we don't want them to "count"
+    mov   word ptr ss:[VARIABLE_cycles_until_next_int_timer], ax  ; 407 or 406
+    sub   ax, word ptr ss:[VARIABLE_CACHED_TIMA_TIMES_TMA]
+    add   ax, word ptr ss:[VARIABLE_CYCLE_COUNT]
+    inc   ax     ; the dec ax for jc logic does nto play into this calculation, undo it
+    mov   word ptr ss:[VARIABLE_cycles_of_last_TIMA_reset], ax  ; can be int he future... weird!
+
+    popf
     ret
+  end_of_write_ff05:
+    public end_of_write_ff05 ; 05A9. up to 05B0 ok...
+
+
+IO_WRITE_DEFINE 05h ; FF05 — TIMA: Timer counter 
+    pushf
+
+    ; ok, what we need to do is: 
+    ; calculate time to next interrupt which is (256-cl) * VARIABLE_TAC_clock_select_cycles_per_increment
+    ; set VARIABLE_cycles_until_next_int_timer to this
+    ; set VARIABLE_cycles_of_last_TIMA_reset to the above minus (VARIABLE_CACHED_TIMA_TIMES_TMA + VARIABLE_CYCLE_COUNT)
+
+    mov   al, byte ptr ss:[VARIABLE_TAC_clock_select_cycles_per_increment]
+    test  al, al
+    jz    mul_cl_by_256
+    test  cl, cl
+    jnz   mul_al_by_neg_cl
+
+  mul_al_by_256:
+    mov   ah, al
+    ; cl  0
+    mov   al, cl 
+    jmp   done_with_FF05_mul
+  mul_cl_by_256:
+    mov   ah, cl
+    ; al already 0
+    jmp   done_with_FF05_mul
+ ; 05E8. up to 0606 ok...
 
 IO_WRITE_DEFINE 06h ; FF06 — TMA: Timer modulo
     mov   byte ptr ds:[0FF06h], cl
     ret
 
-ORG  0760h
+ORG  073Fh
+  use_256_timer_mul:
+    mov   word ptr ss:[VARIABLE_TAC_clock_select_cycles_per_increment], ax ; known zero
+    mov   al, byte ptr ds:[0FF06h]  ; FF06 — TMA: Timer modulo
+  skip_timer_mul:  ; multiply by 256.
+    ; TODO known bug note: 65536 = 0 becomes 65535 which works fine with jc logic.
+    ; however if pending cycles are added above in enable_interrupt, we overflow
+    ; ah known zero
+    xchg  al, ah
+    ; now al known zero
+  done_with_timer_mul:
+    mov   word ptr ss:[VARIABLE_CACHED_TIMA_TIMES_TMA], ax
+    dec   ax  ; dec one because we jc not jbe
+    add   ax, word ptr ss:[VARIABLE_cycles_before_io_readwrite]          ; how many cycles are we into the current instruction? account for this.
+
+    ; FORCE INTERRUPT INLINE, plus add back to VARIABLE_cycles_until_next_int_timer
+    push  cx
+    shr   ch, 1
+    sub   byte ptr ss:[VARIABLE_cycles_since_last_handler], ch
+
+    mov   ch, byte ptr ss:[VARIABLE_CYCLE_COUNT]
+    add   ch, byte ptr ss:[VARIABLE_cycles_since_last_handler]
+    add   ch, byte ptr ss:[VARIABLE_cycles_before_io_readwrite]
+    and   ch, byte ptr ss:[VARIABLE_TAC_clock_select_cycles_per_increment_modulo]
+    jz    FF07_write_clock_aligned_TIMA_skip_sub_1
+    dec   ax
+  FF07_write_clock_aligned_TIMA_skip_sub_1:
+    pop   cx
+    add   ax, word ptr ss:[VARIABLE_cycles_since_last_handler] ; zero ah
+    mov   word ptr ss:[VARIABLE_cycles_until_next_int_timer], ax   ;this came out bad??
+    pop   ax  ; restore ah
+    and   ch, N_FLAG_BIT_CH
+    sahf    
+    ret
+; todo jmp below instead of doing a lot of this.
+
   enable_timer:
-    mov   byte ptr ss:[VARIABLE_TIMA_countdown_active], 1  ; known zero
-    push  ax  ;store flags.
+    mov   byte ptr ss:[VARIABLE_TIMA_countdown_active], 1
+    push  ax  ; store flags from ah
+    mov   ax, word ptr ss:[VARIABLE_CYCLE_COUNT]
+    mov   word ptr ss:[VARIABLE_cycles_of_last_TIMA_reset], ax  ; TODO actually take into account current TIMA/FF05 and mid-instruction cycles.
     mov   al, cl
     and   ax, 3
     jz    use_256_timer_mul
     xchg  ax, bx
-    mov   bl, byte ptr ss:[bx + TABLE_TIMER_MUL_LOOKUP]
+    shl   bx, 1
+    mov   bx, word ptr ss:[bx + TABLE_TIMER_MUL_LOOKUP]
     xchg  ax, bx
+    mov   word ptr ss:[VARIABLE_TAC_clock_select_cycles_per_increment], ax ; write both at once.
 
     ; clock 00 every 256 cycles (times divider)
     ; clock 01 every 4   cycles (times divider)
@@ -1782,17 +1904,10 @@ ORG  0760h
     test  ah, ah
     jz    skip_timer_mul
     mul   ah 
-  done_with_timer_mul:
-    mov   word ptr ss:[VARIABLE_CACHED_TIMA_TIMES_TMA], ax
-    mov   word ptr ss:[VARIABLE_cycles_until_next_int_timer], ax  ; todo this might require different math...
-    pop   ax  ; restore ah
-    jmp   force_interrupt ; todo  inline?
-  use_256_timer_mul:
-    mov   al, byte ptr ds:[0FF06h]  ; FF06 — TMA: Timer modulo
-  skip_timer_mul:  ; multiply by 256.
-    mov   ah, al
-    xor   al, al
     jmp   done_with_timer_mul
+
+    end_of_enable_timer:
+    public end_of_enable_timer ; 7B0  up to 7B0 ok.
 
 IO_WRITE_DEFINE 07h ; FF07 — TAC: Timer control 
     lahf
@@ -1813,7 +1928,8 @@ REPT 0Fh - 08h
         CURRENT_IO = CURRENT_IO + 1
 ENDM
 
-ORG  0F80h
+ORG  0F70h
+; ORG  0F80h
   force_interrupt:
     mov   al, ch
     shr   al, 1
@@ -1877,15 +1993,55 @@ IO_READ_DEFINE 03h ; empty
     mov   al, 0FFh; byte ptr ds:[0FF03h]
     ret
 
-IO_READ_DEFINE 04h ; FF04 — DIV: Divider register TODO
-    ; TODO: dynamically calculate the value based on current cycle count.
-    mov   al, byte ptr ds:[0FF04h]
+IO_READ_DEFINE 04h ; FF04 — DIV: Divider register
+    ; dynamically calculate the value based on current cycle count.
+    pushf
+    ; increases every 64 cycles. shift left 2 and get the those 8 bits.
+    mov   ax, word ptr ss:[VARIABLE_CYCLE_COUNT]
+    sub   ax, word ptr ds:[VARIABLE_cycles_of_last_DIV_reset]
+    shl   ax, 1
+    shl   ax, 1  ; shl 2 div 256 = div 64.
+    mov   al, ah
+    popf
     ret
+    end_of_read_ff04:
+    public end_of_read_ff04 ; 4c1
+ORG 0540h
+  FF05_read_do_div:
+    add   ax, word ptr ss:[VARIABLE_cycles_before_io_readwrite]
+    test  ch, ch
+    je    div_by_256
+    div   ch  ; todo could be a shr cl thing. or a four way branch (jb, je, jp, ja) with different shift chains.
+    pop   cx
+    popf
+    ret
+  div_by_256:
+    mov   al, ah
+    xor   ah, ah
+    pop   cx
+    popf
+    ret
+  end_of_read_ff05_div:
+  public end_of_read_ff05_div ; 550, up to 560 ok
 
 
-IO_READ_DEFINE 05h ; FF05 — TIMA: Timer counter TODO
-    mov   al, byte ptr ds:[0FF05h]
-    ret
+IO_READ_DEFINE 05h ; FF05 — TIMA: Timer counter
+    pushf
+    push  cx
+
+    ; need to add pending cycles (cycles since last minus ch shr 1)
+
+    mov   ax, word ptr ss:[VARIABLE_CYCLE_COUNT]
+    shr   ch, 1
+    sub   al, ch
+    sbb   ah, 0
+    sub   ax, word ptr ss:[VARIABLE_cycles_of_last_TIMA_reset]
+    add   ax, word ptr ss:[VARIABLE_cycles_since_last_handler]
+    mov   ch, byte ptr ss:[VARIABLE_TAC_clock_select_cycles_per_increment]
+    jmp   FF05_read_do_div
+  end_of_read_ff05:
+  public end_of_read_ff05 ; 5cf, up to 5d0 ok
+
 
 
 IO_READ_DEFINE 06h ; FF06 — TMA: Timer modulo
@@ -1954,6 +2110,8 @@ public update_cycle_counts
     IFDEF DEBUG_CYCLE_COUNTER
         add   word ptr ds:[VARIABLE_CYCLE_COUNT+0], ax
         adc   word ptr ds:[VARIABLE_CYCLE_COUNT+2], cx  ; known zero
+    ELSE
+        add   word ptr ds:[VARIABLE_CYCLE_COUNT], ax
     ENDIF
 
     call  sub_ax_cycles_from_interrupts
@@ -1978,6 +2136,7 @@ public update_cycle_counts
 ; 3. figure out new ch value: min(127, min(interrupt clocks)) << 1
 ; even though there are flags disabling some of these,
 ;  as optim we set to FFFF when disabled so this will never pass anyway
+; TODO: modify all the logic so we're aware of this being JC and not JBE logic as we dec the register counter.
     mov   ax, 127  ; ah known  zero
     cmp   ax, word ptr ds:[VARIABLE_cycles_until_next_int_stat]
     ja    set_to_stat_cycles
@@ -2126,6 +2285,7 @@ check_timer:
 ; clock 03 every 64  cycles (times divider)
     push  ax
     mov   ax, word ptr ds:[VARIABLE_CACHED_TIMA_TIMES_TMA] 
+    add   word ptr ds:[VARIABLE_cycles_of_last_TIMA_reset], ax
     add   word ptr ds:[VARIABLE_cycles_until_next_int_timer], ax
     pop   ax
     or    cl, 04h

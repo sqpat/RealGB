@@ -419,6 +419,7 @@ dw CORE2_START, 0
 VARIABLE_BAD_OPCODE_handler:
 dw BAD_OPCODE_DETECTED, SEG INIT
 
+; dword in debug for profiling total cycles
 VARIABLE_CYCLE_COUNT:
 dw 0, 0
 
@@ -439,7 +440,7 @@ VARIABLE_cycles_since_last_handler:
 dw 1  ; default value
 
 VARIABLE_cycles_until_next_int_vblank:
-dw 17560
+dw 17559  ; minus one for jc logic
 VARIABLE_cycles_until_next_int_stat:
 dw 0FFFFh
 VARIABLE_cycles_until_next_int_timer:
@@ -447,12 +448,22 @@ dw 0FFFFh
 VARIABLE_cycles_until_next_int_serial:
 dw 0FFFFh
 
+VARIABLE_cycles_of_last_DIV_reset:
+dw 0
+VARIABLE_cycles_of_last_TIMA_reset:
+dw 0
+VARIABLE_TAC_clock_select_cycles_per_increment:
+db 0 
+VARIABLE_TAC_clock_select_cycles_per_increment_modulo:
+db 0 
 
 ; write in one word.
 VARIABLE_IE_interrupt_enable_FFFF:
 db 0
 VARIABLE_interrupt_pending_flags:
 db 0
+
+
 VARIABLE_IF_interrupt_flag_FF0F:
 db 0E1h, 00  ; vblank on by default.
 VARIABLE_current_timer_control_ticks:
@@ -481,7 +492,13 @@ VARIABLE_EMULATOR_MEMORY_SEGMENT:
 dw EMULATOR_MEMORY_SEGMENT
 
 TABLE_TIMER_MUL_LOOKUP:
-db 0, 4, 16, 64
+; hi byte modulo, lo byte cycle count
+dw 0FF00h, 00304h, 00F10h, 03F40h
+
+
+VARIABLE_cycles_before_io_readwrite:
+dw 0
+
 
 
 gb_cycles_counted:
@@ -496,6 +513,11 @@ db '000.0 sec   FPS: '
 host_fps:
 db '000.0$'
 
+public VARIABLE_cycles_before_io_readwrite
+public VARIABLE_TAC_clock_select_cycles_per_increment_modulo
+public VARIABLE_TAC_clock_select_cycles_per_increment
+public VARIABLE_cycles_of_last_TIMA_reset
+public VARIABLE_cycles_of_last_DIV_reset
 public TABLE_TIMER_MUL_LOOKUP
 public VARIABLE_cpu_in_halt
 public VARIABLE_stat_countdown_active

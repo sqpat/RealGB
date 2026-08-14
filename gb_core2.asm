@@ -6,7 +6,6 @@ INCLUDE gb_defs.inc
 
 EXTRN CORE1_START
 EXTRN VARIABLE_pointer_to_core_1
-EXTRN VARIABLE_CYCLE_COUNT
 EXTRN VARIABLE_cycles_since_last_handler
 EXTRN VARIABLE_cycles_until_next_int_vblank
 EXTRN VARIABLE_cycles_until_next_int_stat
