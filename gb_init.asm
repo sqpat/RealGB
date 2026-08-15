@@ -453,9 +453,11 @@ dw 0
 VARIABLE_cycles_of_last_TIMA_reset:
 dw 0
 VARIABLE_TAC_clock_select_cycles_per_increment:
-db 0 
+dw 00
 VARIABLE_TAC_clock_select_cycles_per_increment_modulo:
 db 0 
+VARIABLE_TAC_clock_select_cycles_per_increment_mask:
+db 0
 
 ; write in one word.
 VARIABLE_IE_interrupt_enable_FFFF:
@@ -492,15 +494,15 @@ VARIABLE_EMULATOR_MEMORY_SEGMENT:
 dw EMULATOR_MEMORY_SEGMENT
 
 TABLE_TIMER_MUL_LOOKUP:
-; hi byte modulo, lo byte cycle count
-dw 0FF00h, 00304h, 00F10h, 03F40h
+dw 00100h, 00004h, 00010h, 00040h
+; lo byte modulo, hi byte mask
+TABLE_TIMER_MODULO_LOOKUP:
+dw 000FFh, 0FC03h, 0F00Fh, 0C03Fh
 
 
 VARIABLE_cycles_before_io_readwrite:
 dw 0
 
-VARIABLE_TAC_clock_select_cycles_per_increment_mask:
-db 0
 
 
 gb_cycles_counted:
@@ -522,6 +524,7 @@ public VARIABLE_TAC_clock_select_cycles_per_increment
 public VARIABLE_cycles_of_last_TIMA_reset
 public VARIABLE_cycles_of_last_DIV_reset
 public TABLE_TIMER_MUL_LOOKUP
+public TABLE_TIMER_MODULO_LOOKUP
 public VARIABLE_cpu_in_halt
 public VARIABLE_stat_countdown_active
 public VARIABLE_serial_countdown_active

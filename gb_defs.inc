@@ -69,7 +69,61 @@ ENDM
 
 DEBUG_CYCLE_COUNTER = 1
 
+COMMENT @
 
+SKIP_CYCLES_MID_INSTRUCTION_PUSHF MACRO cycles
+    pushf
+    sub  ch, (cycles shl 1)  ; todo maybe actually subtract from the variable
+ENDM
+
+LOAD_NEXT_INSTRUCTION_1_CYCLE_POPF MACRO cycles
+  LOCAL overflow_handler_default_popf
+    add  ch, (cycles shl 1)
+    sub  ch, ((cycles + 1) shl 1)
+    jbe  overflow_handler_default_popf  ; todo jc?
+    popf
+    lodsb
+    mov  ah, al
+    jmp  ax
+    overflow_handler_default_popf:
+    popf
+    jmp   update_cycle_counts
+ENDM
+
+; turn n flag off, dec n cycles
+LOAD_NEXT_INSTRUCTION_1_CYCLE_POPF_SET_N_FLAG_OFF MACRO cycles
+  LOCAL overflow_handler_off_popf
+    add  ch, (cycles shl 1)
+    sub  ch, ((cycles + 1) shl 1)
+    jbe   overflow_handler_off_popf
+    and   ch, (NOT N_FLAG_BIT_CH)
+    popf
+    lodsb
+    mov   ah, al
+    jmp   ax
+    overflow_handler_off_popf:
+    and   ch, (NOT N_FLAG_BIT_CH)
+    popf
+    jmp   update_cycle_counts
+ENDM
+
+LOAD_NEXT_INSTRUCTION_1_CYCLE_POPF_SET_N_FLAG_ON MACRO cycles
+  LOCAL overflow_handler_on_popf
+    add  ch, (cycles shl 1)
+    sub  ch, ((cycles + 1) shl 1)
+    jbe   overflow_handler_on_popf
+    or    ch, N_FLAG_BIT_CH
+    popf
+    lodsb
+    mov   ah, al
+    jmp   ax
+    overflow_handler_on_popf:
+    or    ch, N_FLAG_BIT_CH
+    popf
+    jmp   update_cycle_counts
+ENDM
+
+@
 
 LOAD_NEXT_INSTRUCTION MACRO cycles
   LOCAL overflow_handler_default
