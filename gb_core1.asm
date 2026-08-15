@@ -2891,7 +2891,7 @@ ORG 0118h
   public END_OF_RUN_INTERRUPTS ; 1A4
 
 
-ORG 0230h
+ORG 0250h
 ; store flags backwards in cx.
 sub_ax_cycles_from_interrupts:
     cmp   byte ptr ds:[VARIABLE_serial_countdown_active], 0
@@ -2948,7 +2948,7 @@ check_timer:
     add   word ptr ds:[VARIABLE_cycles_until_next_int_vblank], 17560 
     inc   cx
     ret
-  CORE1_START:  ; 0x285
+  CORE1_START:  ; 0x28b
     public CORE1_START
     LOAD_NEXT_INSTRUCTION_NOCYCLES
 
