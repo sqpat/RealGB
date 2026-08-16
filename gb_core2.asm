@@ -6,12 +6,37 @@ INCLUDE gb_defs.inc
 
 EXTRN CORE1_START
 EXTRN VARIABLE_pointer_to_core_1
+EXTRN update_cycle_counts
+EXTRN VARIABLE_BAD_OPCODE_handler
+EXTRN VARIABLE_pointer_to_core_2
+EXTRN VARIABLE_CYCLE_COUNT
+EXTRN VARIABLE_pending_cycle_count
+EXTRN VARIABLE_IME_flag
 EXTRN VARIABLE_cycles_since_last_handler
 EXTRN VARIABLE_cycles_until_next_int_vblank
 EXTRN VARIABLE_cycles_until_next_int_stat
 EXTRN VARIABLE_cycles_until_next_int_timer
 EXTRN VARIABLE_cycles_until_next_int_serial
-EXTRN update_cycle_counts
+EXTRN VARIABLE_current_timer_control_ticks
+EXTRN VARIABLE_IE_interrupt_enable_FFFF
+EXTRN VARIABLE_interrupt_pending_flags
+EXTRN VARIABLE_IF_interrupt_flag_FF0F
+EXTRN VARIABLE_pending_cx_in_interrupt
+EXTRN VARIABLE_EMULATOR_MEMORY_SEGMENT
+EXTRN VARIABLE_CACHED_TIMA_TIMES_TMA
+EXTRN VARIABLE_FF00_joypad
+EXTRN VARIABLE_serial_countdown_active
+EXTRN VARIABLE_TIMA_countdown_active
+EXTRN VARIABLE_stat_countdown_active
+EXTRN VARIABLE_cpu_in_halt
+EXTRN TABLE_TIMER_MUL_LOOKUP
+EXTRN TABLE_TIMER_MODULO_LOOKUP
+EXTRN VARIABLE_cycles_of_last_DIV_reset
+EXTRN VARIABLE_cycles_of_last_TIMA_reset
+EXTRN VARIABLE_TAC_clock_select_cycles_per_increment
+EXTRN VARIABLE_TAC_clock_select_cycles_per_increment_modulo
+EXTRN VARIABLE_TAC_clock_select_cycles_per_increment_mask
+EXTRN VARIABLE_cycles_before_io_readwrite
 
 CORE1 SEGMENT
     ASSUME CS:CORE1
@@ -65,10 +90,22 @@ OPCODE_DEFINE 005h   ; RLC L        ; Z+ N0 H0 C[7]
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 006h   ; RLC (HL)     ; Z+ N0 H0 C[7]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_CB06
+  dont_io_CB06:
+    sahf
     cmp   byte ptr ds:[bx], 0  ; set z, clear af
     rol   byte ptr ds:[bx], 1
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
+    LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF 4
+  check_io_CB06:
+    test  bl, bl
+    js    dont_io_CB06
+    sahf
+    call  do_generic_io_read    
+    cmp   al, 0  ; set z, clear af
+    rol   al, 1
+    jmp   do_generic_io_write_n_off
 
 OPCODE_DEFINE 007h   ; RLC A        ; Z+ N0 H0 C[7]
     test  cl, cl     ; set z, clear af
@@ -117,11 +154,25 @@ OPCODE_DEFINE 00Dh   ; RRC L        ; Z+ N0 H0 C[0]
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 00Eh   ; RRC (HL)     ; Z+ N0 H0 C[0]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_CB0E
+  dont_io_CB0E:
+    sahf
     cmp   byte ptr ds:[bx], 0  ; set z, clear af
     ror   byte ptr ds:[bx], 1
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
+    LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF 4
 
+    LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF 4
+  check_io_CB0E:
+    test  bl, bl
+    js    dont_io_CB0E
+    sahf
+    call  do_generic_io_read
+    cmp   al, 0  ; set z, clear af
+    ror   al, 1
+    jmp   do_generic_io_write_n_off
+    
 OPCODE_DEFINE 00Fh   ; RRC A        ; Z+ N0 H0 C[0]
     test  cl, cl     ; set z, clear af
     ror   cl, 1
@@ -182,12 +233,26 @@ OPCODE_DEFINE 015h   ; RL L         ; Z+ N0 H0 C[0]
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 016h   ; RL (HL)      ; Z+ N0 H0 C[0]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_CB16
+  dont_io_CB16:
+    sahf
     rcl   byte ptr ds:[bx], 1
     lahf                        ; get flags for carry check in bit 0
     cmp   byte ptr ds:[bx], 0   ; set zero flag, clear AF
     ror   ah, 1                 ; set carry flag
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
+  LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF 4
+  check_io_CB16:
+    test  bl, bl
+    js    dont_io_CB16
+    sahf
+    call  do_generic_io_read
+    rcl   al, 1
+    lahf                        ; get flags for carry check in bit 0
+    cmp   al, 0   ; set zero flag, clear AF
+    ror   ah, 1                 ; set carry flag
+    jmp   do_generic_io_write_n_off
 
 OPCODE_DEFINE 017h   ; RL A         ; Z+ N0 H0 C[0]
     rcl   cl, 1
@@ -251,12 +316,26 @@ OPCODE_DEFINE 01Dh   ; RR L         ; Z+ N0 H0 C[0]
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 01Eh   ; RR (HL)      ; Z+ N0 H0 C[0]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_CB1E
+  dont_io_CB1E:
+    sahf
     rcr   byte ptr ds:[bx], 1
     lahf                        ; get flags for carry check in bit 0
     cmp   byte ptr ds:[bx], 0   ; set zero flag, clear AF
     ror   ah, 1                 ; set carry flag
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
+  LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF 4
+  check_io_CB1E:
+    test  bl, bl
+    js    dont_io_CB1E
+    sahf
+    call  do_generic_io_read
+    rcr   al, 1
+    lahf                        ; get flags for carry check in bit 0
+    cmp   al, 0   ; set zero flag, clear AF
+    ror   ah, 1                 ; set carry flag
+    jmp   do_generic_io_write_n_off
 
 OPCODE_DEFINE 01Fh   ; RR A         ; Z+ N0 H0 C[0]
     rcr   cl, 1
@@ -307,10 +386,22 @@ OPCODE_DEFINE 025h   ; SLA L        ; Z+ N0 H0 C[0]
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 026h   ; SLA (HL)     ; Z+ N0 H0 C[0]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_CB26
+  dont_io_CB26:
+    sahf
     test  byte ptr ds:[bx], 07Fh    ; set ZF, clear AF/CF
     rcl   byte ptr ds:[bx], 1
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
+  LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF 4
+  check_io_CB26:
+    test  bl, bl
+    js    dont_io_CB26
+    sahf
+    call  do_generic_io_read
+    test  al, 07Fh    ; set ZF, clear AF/CF
+    rcl   al, 1
+    jmp   do_generic_io_write_n_off
 
 OPCODE_DEFINE 027h   ; SLA A        ; Z+ N0 H0 C[0]
     test  cl, 07Fh    ; set ZF, clear AF/CF
@@ -374,12 +465,26 @@ OPCODE_DEFINE 02Dh   ; SRA L        ; Z+ N0 H0 C[0]
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 02Eh   ; SRA (HL)     ; Z+ N0 H0 C[0]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_CB2E
+  dont_io_CB2E:
+    sahf
     sar   byte ptr ds:[bx], 1
     lahf
     and   ah, 0EFh  ; turn off AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
+  LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF 4
+  check_io_CB2E:
+    test  bl, bl
+    js    dont_io_CB2E
+    sahf
+    call  do_generic_io_read
+    sar   al, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
+    jmp   do_generic_io_write_n_off
 
 OPCODE_DEFINE 02Fh   ; SRA A        ; Z+ N0 H0 C[0]
     sar   cl, 1
@@ -430,12 +535,24 @@ OPCODE_DEFINE 035h   ; SWAP L       ; Z+ N0 H0 C0
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 036h   ; SWAP (HL)    ; Z+ N0 H0 C0
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_CB36
+  dont_io_CB36:
+    sahf
     mov   al, byte ptr ds:[bx]
     ROL4_MACRO al
     mov   byte ptr ds:[bx], al
     test  al, al
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
+  LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF 4
+  check_io_CB36:
+    test  bl, bl
+    js    dont_io_CB36
+    sahf
+    call  do_generic_io_read
+    ROL4_MACRO al
+    test  al, al  ; flags
+    jmp   do_generic_io_write_n_off
 
 OPCODE_DEFINE 037h   ; SWAP A       ; Z+ N0 H0 C0
     ROL4_MACRO cl
@@ -496,12 +613,28 @@ OPCODE_DEFINE 03Dh   ; SRL L        ; Z+ N0 H0 C[0]
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
 OPCODE_DEFINE 03Eh   ; SRL (HL)     ; Z+ N0 H0 C[0]
+    lahf
+    cmp   bh, 0FFh
+    je    check_io_CB3E
+  dont_io_CB3E:
+    sahf
     shr   byte ptr ds:[bx], 1
     lahf
     and   ah, 0EFh  ; turn off AF
     sahf
-    SET_N_FLAG_OFF
-    LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
+  LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF 4
+  check_io_CB3E:
+    test  bl, bl
+    js    dont_io_CB3E
+    sahf
+    call  do_generic_io_read
+    shr   al, 1
+    lahf
+    and   ah, 0EFh  ; turn off AF
+    sahf
+    jmp   do_generic_io_write_n_off
+    end_of_CB3E:
+    public end_of_CB3E ; todo definitely too far.
 
 OPCODE_DEFINE 03Fh   ; SRL A        ; Z+ N0 H0 C[0]
     shr   cl, 1
@@ -1188,8 +1321,21 @@ OPCODE_DEFINE 085h   ; RES 0, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 08640h
+  check_io_CB86:
+    test  bl, bl
+    js    dont_io_CB86
+    sahf
+    call  do_generic_io_read
+    lahf
+    and   al, (NOT (1 SHL 0))
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 086h   ; RES 0, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CB86
+  dont_io_CB86:
     and   byte ptr ds:[bx], (NOT (1 SHL 0))
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1236,8 +1382,21 @@ OPCODE_DEFINE 08Dh   ; RES 1, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 08E40h
+  check_io_CB8E:
+    test  bl, bl
+    js    dont_io_CB8E
+    sahf
+    call  do_generic_io_read
+    lahf
+    and   al, (NOT (1 SHL 1))
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 08Eh   ; RES 1, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CB8E
+  dont_io_CB8E:
     and   byte ptr ds:[bx], (NOT (1 SHL 1))
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1284,8 +1443,21 @@ OPCODE_DEFINE 095h   ; RES 2, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 09650h
+  check_io_CB96:
+    test  bl, bl
+    js    dont_io_CB96
+    sahf
+    call  do_generic_io_read
+    lahf
+    and   al, (NOT (1 SHL 2))
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 096h   ; RES 2, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CB96
+  dont_io_CB96:
     and   byte ptr ds:[bx], (NOT (1 SHL 2))
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1332,8 +1504,21 @@ OPCODE_DEFINE 09Dh   ; RES 3, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 09E50h
+  check_io_CB9E:
+    test  bl, bl
+    js    dont_io_CB9E
+    sahf
+    call  do_generic_io_read
+    lahf
+    and   al, (NOT (1 SHL 3))
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 09Eh   ; RES 3, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CB9E
+  dont_io_CB9E:
     and   byte ptr ds:[bx], (NOT (1 SHL 3))
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1380,8 +1565,21 @@ OPCODE_DEFINE 0A5h   ; RES 4, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0A660h
+  check_io_CBA6:
+    test  bl, bl
+    js    dont_io_CBA6
+    sahf
+    call  do_generic_io_read
+    lahf
+    and   al, (NOT (1 SHL 4))
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0A6h   ; RES 4, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBA6
+  dont_io_CBA6:
     and   byte ptr ds:[bx], (NOT (1 SHL 4))
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1428,8 +1626,21 @@ OPCODE_DEFINE 0ADh   ; RES 5, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0AE60h
+  check_io_CBAE:
+    test  bl, bl
+    js    dont_io_CBAE
+    sahf
+    call  do_generic_io_read
+    lahf
+    and   al, (NOT (1 SHL 5))
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0AEh   ; RES 5, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBAE
+  dont_io_CBAE:
     and   byte ptr ds:[bx], (NOT (1 SHL 5))
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1476,8 +1687,21 @@ OPCODE_DEFINE 0B5h   ; RES 6, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0B670h
+  check_io_CBB6:
+    test  bl, bl
+    js    dont_io_CBB6
+    sahf
+    call  do_generic_io_read
+    lahf
+    and   al, (NOT (1 SHL 6))
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0B6h   ; RES 6, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBB6
+  dont_io_CBB6:
     and   byte ptr ds:[bx], (NOT (1 SHL 6))
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1524,8 +1748,21 @@ OPCODE_DEFINE 0BDh   ; RES 7, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0BE70h
+  check_io_CBBE:
+    test  bl, bl
+    js    dont_io_CBBE
+    sahf
+    call  do_generic_io_read
+    lahf
+    and   al, (NOT (1 SHL 7))
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0BEh   ; RES 7, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBBE
+  dont_io_CBBE:
     and   byte ptr ds:[bx], (NOT (1 SHL 7))
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1572,8 +1809,21 @@ OPCODE_DEFINE 0C5h   ; SET 0, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0C6A0h
+  check_io_CBC6:
+    test  bl, bl
+    js    dont_io_CBC6
+    sahf
+    call  do_generic_io_read
+    lahf
+    or    al,  (1 SHL 0)
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0C6h   ; SET 0, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBC6
+  dont_io_CBC6:
     or    byte ptr ds:[bx],  (1 SHL 0)
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1620,8 +1870,21 @@ OPCODE_DEFINE 0CDh   ; SET 1, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0CEA0h
+  check_io_CBCE:
+    test  bl, bl
+    js    dont_io_CBCE
+    sahf
+    call  do_generic_io_read
+    lahf
+    or    al,  (1 SHL 1)
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0CEh   ; SET 1, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBCE
+  dont_io_CBCE:
     or    byte ptr ds:[bx],  (1 SHL 1)
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1668,8 +1931,21 @@ OPCODE_DEFINE 0D5h   ; SET 2, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0D6A0h
+  check_io_CBD6:
+    test  bl, bl
+    js    dont_io_CBD6
+    sahf
+    call  do_generic_io_read
+    lahf
+    or    al,  (1 SHL 2)
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0D6h   ; SET 2, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBD6
+  dont_io_CBD6:
     or    byte ptr ds:[bx],  (1 SHL 2)
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1716,8 +1992,21 @@ OPCODE_DEFINE 0DDh   ; SET 3, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0DEA0h
+  check_io_CBDE:
+    test  bl, bl
+    js    dont_io_CBDE
+    sahf
+    call  do_generic_io_read
+    lahf
+    or    al,  (1 SHL 3)
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0DEh   ; SET 3, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBDE
+  dont_io_CBDE:
     or    byte ptr ds:[bx],  (1 SHL 3)
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1764,8 +2053,21 @@ OPCODE_DEFINE 0E5h   ; SET 4, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0E6A0h
+  check_io_CBE6:
+    test  bl, bl
+    js    dont_io_CBE6
+    sahf
+    call  do_generic_io_read
+    lahf
+    or    al,  (1 SHL 4)
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0E6h   ; SET 4, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBE6
+  dont_io_CBE6:
     or    byte ptr ds:[bx],  (1 SHL 4)
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1812,8 +2114,21 @@ OPCODE_DEFINE 0EDh   ; SET 5, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0EEA0h
+  check_io_CBEE:
+    test  bl, bl
+    js    dont_io_CBEE
+    sahf
+    call  do_generic_io_read
+    lahf
+    or    al,  (1 SHL 5)
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0EEh   ; SET 5, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBEE
+  dont_io_CBEE:
     or    byte ptr ds:[bx],  (1 SHL 5)
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1860,8 +2175,21 @@ OPCODE_DEFINE 0F5h   ; SET 6, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0F6A0h
+  check_io_CBF6:
+    test  bl, bl
+    js    dont_io_CBF6
+    sahf
+    call  do_generic_io_read
+    lahf
+    or    al,  (1 SHL 6)
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0F6h   ; SET 6, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBF6
+  dont_io_CBF6:
     or    byte ptr ds:[bx],  (1 SHL 6)
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1908,8 +2236,21 @@ OPCODE_DEFINE 0FDh   ; SET 7, L     ; Z- N- H- C-
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+ORG 0FEA0h
+  check_io_CBFE:
+    test  bl, bl
+    js    dont_io_CBFE
+    sahf
+    call  do_generic_io_read
+    lahf
+    or    al,  (1 SHL 7)
+    sahf
+    jmp   do_generic_io_write
 OPCODE_DEFINE 0FEh   ; SET 7, (HL)  ; Z- N- H- C-
     lahf
+    cmp   bh, 0FFh
+    je    check_io_CBFE
+  dont_io_CBFE:
     or    byte ptr ds:[bx],  (1 SHL 7)
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
@@ -1926,6 +2267,9 @@ ORG FF_OPCODE_HANDLER_OFFSET
     sahf
     LOAD_NEXT_INSTRUCTION_SEGMENT_2 2
 
+include gb_io.asm
+
+
 
 ORG 0030h
 update_cycle_counts_seg2:
@@ -1934,6 +2278,44 @@ update_cycle_counts_seg2:
     mov  word ptr ss:[VARIABLE_pointer_to_core_1], OFFSET update_cycle_counts
     jmp  dword ptr ss:[VARIABLE_pointer_to_core_1]
 
+
+ORG 0D40h
+  do_generic_io_read:
+    mov   ah, bl
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 2
+    mov   al, IO_READ_OFFSET
+    call  ax  ; IO handler 
+    ret
+  do_generic_io_write_n_off:
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 3
+    push  cx
+    mov   cl, al
+    mov   ah, bl
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    pop   ax
+    mov   cl, al ; restore accumulator
+    LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF 4
+  do_generic_io_write_n_on:
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 3
+    push  cx
+    mov   cl, al
+    mov   ah, bl
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    pop   ax
+    mov   cl, al ; restore accumulator
+    LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_ON 4
+  do_generic_io_write:
+    mov   byte ptr ss:[VARIABLE_cycles_before_io_readwrite], 3
+    push  cx
+    mov   cl, al
+    mov   ah, bl
+    mov   al, IO_WRITE_OFFSET
+    call  ax  ; IO handler 
+    pop   ax
+    mov   cl, al ; restore accumulator
+    LOAD_NEXT_INSTRUCTION_SEGMENT_2 4
 
 
 

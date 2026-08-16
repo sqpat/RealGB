@@ -179,6 +179,44 @@ LOAD_NEXT_INSTRUCTION_SEGMENT_2 MACRO cycles
     jmp   update_cycle_counts_seg2
 ENDM
 
+LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_OFF MACRO cycles
+  LOCAL overflow_handler_seg2_off
+    lahf
+    sub   ch, (cycles shl 1)
+    jbe   overflow_handler_seg2_off  ; todo jc
+    and   ch, (NOT N_FLAG_BIT_CH)
+    sahf
+    pop  ax
+    PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
+    lodsb
+    mov  ah, al
+    mov  word ptr ss:[VARIABLE_pointer_to_core_1], ax
+    jmp  dword ptr ss:[VARIABLE_pointer_to_core_1]
+  overflow_handler_seg2_off:
+    and   ch, (NOT N_FLAG_BIT_CH)
+    sahf
+    jmp   update_cycle_counts_seg2
+ENDM
+
+LOAD_NEXT_INSTRUCTION_SEGMENT_2_SET_N_FLAG_ON MACRO cycles
+  LOCAL overflow_handler_seg2_on
+    lahf
+    sub   ch, (cycles shl 1)
+    jbe   overflow_handler_seg2_on  ; todo jc
+    or    ch, N_FLAG_BIT_CH
+    sahf
+    pop  ax
+    PUSH_IMMEDIATE_MACRO FF_OPCODE_HANDLER_OFFSET
+    lodsb
+    mov  ah, al
+    mov  word ptr ss:[VARIABLE_pointer_to_core_1], ax
+    jmp  dword ptr ss:[VARIABLE_pointer_to_core_1]
+  overflow_handler_seg2_on:
+    or    ch, N_FLAG_BIT_CH
+    sahf
+    jmp   update_cycle_counts_seg2
+ENDM
+
 LOAD_NEXT_INSTRUCTION_NOCYCLES MACRO
     lodsb
     mov  ah, al
