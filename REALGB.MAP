@@ -1,7 +1,7 @@
 Open Watcom Linker Version 2.0 beta Sep  3 2024 02:05:05 (32-bit)
 Copyright (c) 2002-2024 The Open Watcom Contributors. All Rights Reserved.
 Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
-Created on:       26/08/15 00:27:07
+Created on:       26/08/15 02:38:31
 Warning! W1027: file gb_core2.obj(gb_core2.ASM): redefinition of END_OF_ENABLE_TIMER ignored
 Warning! W1027: file gb_core2.obj(gb_core2.ASM): redefinition of FF01_END_OF_WRITE ignored
 Warning! W1027: file gb_core2.obj(gb_core2.ASM): redefinition of START_OF_IO_READ_00 ignored
@@ -126,4 +126,4 @@ Module: gb_core2.obj(gb_core2.ASM)
 Stack size:  0400 (1024.)
 Memory size:  00020400 (132096.)
 Entry point address: 2000:0000
-Link time: 00:00.00
+Link time: 00:00.55
